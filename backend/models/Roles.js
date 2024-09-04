@@ -22,6 +22,19 @@ const Role = sequelize.define('Role', {
     onDelete: 'SET NULL',
     onUpdate: 'CASCADE',
   },
+  created_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: DataTypes.NOW,
+    field: 'created_at',
+  },
+  updated_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: DataTypes.NOW,
+    onUpdate: DataTypes.NOW,
+    field: 'updated_at',
+  },
 }, {
   tableName: 'Roles',
   timestamps: true,

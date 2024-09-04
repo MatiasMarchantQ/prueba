@@ -2,13 +2,26 @@ const bcrypt = require('bcrypt');
 const User = require('../models/Users');
 const Region = require('../models/Regions');
 const Commune = require('../models/Communes');
+const Role = require('../models/Roles');
 const { Op } = require('sequelize');
 
+const getAdminRoleId = async () => {
+  const adminRoleId = await Role.findOne({
+    where: { role_name: 'Administrador' },
+    attributes: ['role_id', 'role_name', 'modified_by_user_id', 'created_at', 'updated_at'],
+  });
+  return adminRoleId.role_id;
+};
 
 exports.register = async (req, res) => {
   const { first_name, second_name, last_name, second_last_name, rut, email, password, phone_number, company_id, region_id, commune_id, street, number, department_office_floor, role_id, status, must_change_password } = req.body;
 
   try {
+    const adminRoleId = await getAdminRoleId();
+    if (req.user.role_id !== adminRoleId) {
+      return res.status(403).json({ message: 'Solo los administradores pueden registrar usuarios' });
+    }
+
     const existingUser = await User.findOne({ where: { [Op.or]: [{ rut }, { email }] } });
     if (existingUser) {
       if (existingUser.rut === rut) {
