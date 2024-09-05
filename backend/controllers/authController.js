@@ -3,6 +3,8 @@ const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 const Users = require('../models/Users');
 const Role = require('../models/Roles');
+const dotenv = require('dotenv');
+dotenv.config();
 
 
 exports.login = async (req, res) => {
@@ -56,14 +58,13 @@ exports.forgotPassword = async (req, res) => {
 
     const token = jwt.sign({ user_id: user.user_id }, process.env.SECRET_KEY, { expiresIn: '1h' });
 
-    // Enviar correo electrónico con el token
     const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 587,
-      secure: false, // or 'STARTTLS'
+      secure: false,
       auth: {
-        user: 'noreply.ingbell@gmail.com',
-        pass: 'bcagcgdiatzdyihi'
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD
       }
     });
 
@@ -71,7 +72,7 @@ exports.forgotPassword = async (req, res) => {
       from: 'noreply.ingbell@gmail.com',
       to: email,
       subject: 'Recuperación de contraseña',
-      text: `Hola ${user.first_name},\n\nPara recuperar tu contraseña, haz clic en el siguiente enlace: ${req.protocol}://${req.get('host')}/reset-password/${token}\n\nSi no solicitaste esta recuperación, ignora este correo electrónico.\n\nAtentamente,\nTu equipo`
+      text: `Hola ${user.first_name},\n\nPara recuperar tu contraseña, haz clic en el siguiente enlace: ${req.protocol}://${req.get('host')}/api/auth/reset-password/${token}\n\nSi no solicitaste esta recuperación, ignora este correo electrónico.\n\nAtentamente,\nTu equipo`
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
@@ -90,7 +91,11 @@ exports.forgotPassword = async (req, res) => {
 
 exports.resetPassword = async (req, res) => {
   const { token } = req.params;
-  const { password } = req.body;
+  const { password, confirmPassword } = req.body;
+
+  if (password !== confirmPassword) {
+    return res.status(400).json({ message: 'Passwords do not match' });
+  }
 
   try {
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
