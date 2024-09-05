@@ -126,7 +126,7 @@ exports.getAllUsers = async (req, res) => {
 exports.updateUser = async (req, res) => {
   try {
     const authHeader = req.header('Authorization');
-    if (!authHeader) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ message: 'No autenticado' });
     }
 
@@ -139,65 +139,56 @@ exports.updateUser = async (req, res) => {
       const decodedToken = await jwt.verify(bearerToken, process.env.SECRET_KEY);
       console.log(`Token: ${bearerToken}`);
       console.log(`SECRET_KEY: ${process.env.SECRET_KEY}`);
-    } catch (error) {
-      console.error(error);
-      return res.status(401).json({ message: 'Invalid token' });
-    }
 
-    const userId = req.params.id;
-    const user = await User.findByPk(userId);
-    if (!user) {
-      return res.status(404).json({ message: 'Usuario no encontrado' });
-    }
+      const userId = req.params.id;
+      const user = await User.findByPk(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'Usuario no encontrado' });
+      }
 
-    // Verificar que el token pertenece al usuario que se está intentando actualizar
-    try {
-      const decodedToken = await jwt.verify(bearerToken, process.env.SECRET_KEY);
-      if (decodedToken.userId !== userId) {
+      // Verificar que el token pertenece al usuario que se está intentando actualizar
+      // Verificar que el usuario autenticado tenga permiso para actualizar el usuario
+      const adminRoleId = await getAdminRoleId();
+      if (decodedToken.role_id !== adminRoleId && decodedToken.user_id !== parseInt(userId)) {
         return res.status(403).json({ message: 'No tienes permiso para actualizar este usuario' });
       }
+
+      const updates = req.body;
+      if (updates.rut) {
+        const existingUser = await User.findOne({ where: { rut: updates.rut, user_id: { [Op.ne]: userId } } });
+        if (existingUser) {
+          return res.status(400).json({ message: 'El RUT ya está registrado' });
+        }
+      }
+
+      if (updates.email) {
+        const existingUser = await User.findOne({ where: { email: updates.email, user_id: { [Op.ne]: userId } } });
+        if (existingUser) {
+          return res.status(400).json({ message: 'El email ya está registrado' });
+        }
+      }
+
+      if (updates.commune_id) {
+        const commune = await Commune.findOne({ where: { commune_id: updates.commune_id } });
+        if (!commune) {
+          return res.status(400).json({ message: 'Comuna no encontrada' });
+        }
+        if (commune.region_id !== updates.region_id) {
+          return res.status(400).json({ message: 'La comuna no pertenece a la región especificada' });
+        }
+      }
+
+      if (updates.password) {
+        const hashedPassword = await bcrypt.hash(updates.password, 10);
+        updates.password = hashedPassword;
+      }
+
+      await user.update(updates);
+      res.json(user);
     } catch (error) {
       console.error(error);
       return res.status(401).json({ message: 'Invalid token' });
     }
-
-    const updates = req.body;
-    if (updates.rut) {
-      const existingUser = await User.findOne({ where: { rut: updates.rut, user_id: { [Op.ne]: userId } } });
-      if (existingUser) {
-        return res.status(400).json({ message: 'El RUT ya está registrado' });
-      }
-    }
-
-    if (updates.email) {
-      const existingUser = await User.findOne({ where: { email: updates.email, user_id: { [Op.ne]: userId } } });
-      if (existingUser) {
-        return res.status(400).json({ message: 'El email ya está registrado' });
-      }
-    }
-
-    if (updates.commune_id) {
-      const commune = await Commune.findOne({ where: { commune_id: updates.commune_id } });
-      if (!commune) {
-        return res.status(400).json({ message: 'Comuna no encontrada' });
-      }
-      if (commune.region_id !== updates.region_id) {
-        return res.status(400).json({ message: 'La comuna no pertenece a la región especificada' });
-      }
-    }
-
-    if (updates.password) {
-      const hashedPassword = await bcrypt.hash(updates.password, 10);
-      updates.password = hashedPassword;
-    }
-
-    // Verificar que el usuario autenticado tenga permiso para actualizar el usuario
-    if (decodedToken.roleId !== adminRoleId) {
-      return res.status(403).json({ message: 'No tienes permiso para actualizar este usuario' });
-    }
-
-    await user.update(updates);
-    res.json(user);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error al actualizar el usuario' });
