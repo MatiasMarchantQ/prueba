@@ -146,14 +146,14 @@ exports.updateUser = async (req, res) => {
         return res.status(404).json({ message: 'Usuario no encontrado' });
       }
 
-      // Verificar que el token pertenece al usuario que se está intentando actualizar
-      // Verificar que el usuario autenticado tenga permiso para actualizar el usuario
       const adminRoleId = await getAdminRoleId();
       if (decodedToken.role_id !== adminRoleId && decodedToken.user_id !== parseInt(userId)) {
         return res.status(403).json({ message: 'No tienes permiso para actualizar este usuario' });
       }
 
       const updates = req.body;
+      updates.modified_by_user_id = decodedToken.user_id; // Agregar el user_id del usuario que realizó la modificación
+
       if (updates.rut) {
         const existingUser = await User.findOne({ where: { rut: updates.rut, user_id: { [Op.ne]: userId } } });
         if (existingUser) {
