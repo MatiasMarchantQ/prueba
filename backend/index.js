@@ -10,9 +10,9 @@ app.use('/api/users', userRoutes);
 
 // Sync database
 sequelize.sync()
-  .then(() => console.log('Database synced'))
-  .catch(err => console.error('Database sync failed:', err));
+  .then(() => console.log('Base de datos sincronizada'))
+  .catch(err => console.error('Error en la sincronización con la Base de datos:', err));
 
 app.listen(3000, () => {
-  console.log('Server running on port 3000');
+  console.log('Servidor corriendo en el puerto 3000');
 });

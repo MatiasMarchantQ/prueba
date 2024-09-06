@@ -132,13 +132,12 @@ exports.updateUser = async (req, res) => {
 
     const bearerToken = authHeader.split(' ')[1];
     if (!bearerToken) {
-      return res.status(401).json({ message: 'Invalid token' });
+      return res.status(401).json({ message: 'Token inválido' });
     }
 
     try {
       const decodedToken = await jwt.verify(bearerToken, process.env.SECRET_KEY);
-      console.log(`Token: ${bearerToken}`);
-      console.log(`SECRET_KEY: ${process.env.SECRET_KEY}`);
+      req.user = decodedToken;
 
       const userId = req.params.id;
       const user = await User.findByPk(userId);
@@ -146,13 +145,15 @@ exports.updateUser = async (req, res) => {
         return res.status(404).json({ message: 'Usuario no encontrado' });
       }
 
-      const adminRoleId = await getAdminRoleId();
-      if (decodedToken.role_id !== adminRoleId && decodedToken.user_id !== parseInt(userId)) {
+      const userFromDB = await User.findByPk(req.user.user_id);
+      const userRoleId = userFromDB.role_id;
+
+      if (userRoleId !== 1 && req.user.user_id !== parseInt(userId)) {
         return res.status(403).json({ message: 'No tienes permiso para actualizar este usuario' });
       }
 
       const updates = req.body;
-      updates.modified_by_user_id = decodedToken.user_id; // Agregar el user_id del usuario que realizó la modificación
+      updates.modified_by_user_id = decodedToken.user_id;
 
       if (updates.rut) {
         const existingUser = await User.findOne({ where: { rut: updates.rut, user_id: { [Op.ne]: userId } } });
@@ -187,10 +188,10 @@ exports.updateUser = async (req, res) => {
       res.json(user);
     } catch (error) {
       console.error(error);
-      return res.status(401).json({ message: 'Invalid token' });
+      res.status(500).json({ message: 'Error al actualizar el usuario' });
     }
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Error al actualizar el usuario' });
+    res.status(401).json({ message: 'Token inválido' });
   }
 };

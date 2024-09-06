@@ -14,13 +14,13 @@ exports.login = async (req, res) => {
     const user = await Users.findOne({ where: { email } });
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ message: 'Credenciales inválidas' });
     }
 
     const role = await Role.findOne({
@@ -28,15 +28,25 @@ exports.login = async (req, res) => {
       attributes: ['role_id', 'role_name']
     });
 
-    const token = jwt.sign({ user_id: user.user_id, role_id: user.role_id }, process.env.SECRET_KEY, { expiresIn: '1h' });
+    if (user.must_change_password === 1) {
+      const token = jwt.sign({ user_id: user.user_id, role_id: user.role_id }, process.env.SECRET_KEY, { expiresIn: '1h' });
+      return res.status(403).json({
+        message: 'Debes cambiar tu contraseña',
+        token,
+        redirect: '/change-password?token=' + token + '&user_id=' + user.user_id,
+      });
+    }
+
+    const token = jwt.sign({ user_id: user.user_id }, process.env.SECRET_KEY, { expiresIn: '1h' });
 
     res.status(200).json({
-      message: 'Login successful',
+      message: 'Login exitoso',
       token,
       user: {
         first_name: user.first_name,
         last_name: user.last_name,
         role_name: role.role_name,
+        must_change_password: (user.must_change_password === true || user.must_change_password === 1) ? 'Debe cambiar contraseña' : 'No necesita cambiar contraseña'
       },
     });
   } catch (err) {
@@ -45,6 +55,38 @@ exports.login = async (req, res) => {
   }
 };
 
+exports.changePassword = async (req, res) => {
+  const { password, confirmPassword } = req.body;
+  const { token } = req.params;
+
+  if (password !== confirmPassword) {
+    return res.status(400).json({ message: 'Las contraseñas no coinciden' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
+    const user_id = decoded.user_id;
+
+    const user = await Users.findOne({ where: { user_id } });
+
+    if (!user) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    if (!user.must_change_password) {
+      return res.status(400).json({ message: 'No es necesario cambiar la contraseña' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await user.update({ password: hashedPassword, must_change_password: 0 });
+
+    res.status(200).json({ message: 'Contraseña actualizada con éxito' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error del servidor' });
+  }
+};
 
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
@@ -103,12 +145,12 @@ exports.resetPassword = async (req, res) => {
     const user = await Users.findOne({ where: { user_id: decoded.user_id } });
 
     if (!user) {
-      return res.status(404).json({ message: 'Usuario no encontrado' });
+      return res.status(404).json({ message: 'User not found' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await user.update({ password: hashedPassword });
+    await user.update({ password: hashedPassword, must_change_password: 0 });
 
     res.status(200).json({ message: 'Contraseña actualizada con éxito' });
   } catch (err) {
