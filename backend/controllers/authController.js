@@ -114,7 +114,7 @@ exports.forgotPassword = async (req, res) => {
       from: 'noreply.ingbell@gmail.com',
       to: email,
       subject: 'Recuperación de contraseña',
-      text: `Hola ${user.first_name},\n\nPara recuperar tu contraseña, haz clic en el siguiente enlace: ${req.protocol}://${req.get('host')}/api/auth/reset-password/${token}\n\nSi no solicitaste esta recuperación, ignora este correo electrónico.\n\nAtentamente,\nTu equipo`
+      text: `Hola ${user.first_name},\n\nPara recuperar tu contraseña, haz clic en el siguiente enlace: http://localhost:3000/resetpassword/${token}\n\nSi no solicitaste esta recuperación, ignora este correo electrónico.\n\nAtentamente,\nTu equipo`
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
