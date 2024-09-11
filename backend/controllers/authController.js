@@ -37,7 +37,7 @@ exports.login = async (req, res) => {
       });
     }
 
-    const token = jwt.sign({ user_id: user.user_id }, process.env.SECRET_KEY, { expiresIn: '1h' });
+    const token = jwt.sign({ user_id: user.user_id, role_id: user.role_id }, process.env.SECRET_KEY, { expiresIn: '1h' });
 
     res.status(200).json({
       message: 'Login exitoso',
@@ -45,6 +45,7 @@ exports.login = async (req, res) => {
       user: {
         first_name: user.first_name,
         last_name: user.last_name,
+        role_id: role.role_id,
         role_name: role.role_name,
         must_change_password: (user.must_change_password === true || user.must_change_password === 1) ? 'Debe cambiar contraseña' : 'No necesita cambiar contraseña'
       },
@@ -52,6 +53,29 @@ exports.login = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.logout = async (req, res) => {
+  const token = req.headers['authorization'];
+  if (!token || !token.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  const tokenValue = token.replace('Bearer ', '');
+
+  try {
+    const decoded = jwt.verify(tokenValue, process.env.SECRET_KEY, { algorithms: ['HS256'] }, (err, decoded) => {
+      if (err) {
+        console.error(err);
+        return res.status(401).json({ message: 'Token de autenticación inválido' });
+      }
+      // If the token is valid, proceed with the logout logic
+      res.status(200).json({ message: 'Sesión cerrada con éxito' });
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error del servidor' });
   }
 };
 
