@@ -1,6 +1,5 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
-import User from './Users.js';
 
 const Role = sequelize.define('Role', {
   role_id: {
@@ -15,10 +14,6 @@ const Role = sequelize.define('Role', {
   modified_by_user_id: {
     type: DataTypes.INTEGER,
     allowNull: true,
-    references: {
-      model: User,
-      key: 'user_id',
-    },
     onDelete: 'SET NULL',
     onUpdate: 'CASCADE',
   },
@@ -39,7 +34,5 @@ const Role = sequelize.define('Role', {
   tableName: 'Roles',
   timestamps: true,
 });
-
-Role.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifier' });
 
 export default Role;

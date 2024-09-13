@@ -8,25 +8,16 @@ import { Op } from 'sequelize';
 
 const getAdminRoleId = async () => {
   const adminRoleId = await Role.findOne({
-    where: { role_name: 'Administrador' },
+    where: { role_name: 'SuperAdmin' },
     attributes: ['role_id', 'role_name', 'modified_by_user_id', 'created_at', 'updated_at'],
   });
   return adminRoleId.role_id;
 };
 
-export const getUser = async (req, res) => {
-  const token = req.headers.authorization.split(' ')[1];
-  const decodedToken = jwt.verify(token, process.env.SECRET_KEY);
-  const userId = decodedToken.user_id;
-
+export const getAllUsers = async (req, res) => {
   try {
-    const user = await User.findOne({ where: { user_id: userId } });
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    res.status(200).json({ message: 'User found', user });
+    const users = await User.findAll();
+    res.status(200).json({ message: 'Users found', users });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
@@ -88,38 +79,6 @@ export const register = async (req, res) => {
   } catch (err) {
     console.error('Error registering user:', err);
     res.status(500).json({ message: 'Error registering user' });
-  }
-};
-
-export const getAllUsers = async (req, res) => {
-  try {
-    const users = await User.findAll({
-      attributes: [
-        'user_id',
-        'first_name',
-        'second_name',
-        'last_name',
-        'second_last_name',
-        'rut',
-        'email',
-        'phone_number',
-        'company_id',
-        'region_id',
-        'commune_id',
-        'street',
-        'number',
-        'department_office_floor',
-        'role_id',
-        'status',
-        'must_change_password',
-        'created_at',
-        'updated_at',
-      ],
-    });
-    res.json(users);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error al obtener los usuarios' });
   }
 };
 
@@ -197,8 +156,7 @@ export const updateUser = async (req, res) => {
 };
 
 export default {
-  getUser,
-  register,
   getAllUsers,
+  register,
   updateUser,
 };
