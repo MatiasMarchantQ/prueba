@@ -41,6 +41,10 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: true,
   },
+  sales_channel_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
   company_id: {
     type: DataTypes.INTEGER,
     allowNull: true,

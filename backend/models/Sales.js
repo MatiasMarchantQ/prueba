@@ -10,11 +10,6 @@ const Sales = sequelize.define('Sales', {
   service_id: {
     type: DataTypes.STRING(50),
     allowNull: true,
-    validate: {
-      notEmpty: {
-        msg: 'Service ID is required'
-      }
-    }
   },
   entry_date: {
     type: DataTypes.DATE,
@@ -23,47 +18,22 @@ const Sales = sequelize.define('Sales', {
   sales_channel_id: {
     type: DataTypes.INTEGER(11),
     allowNull: false,
-    validate: {
-      notEmpty: {
-        msg: 'Sales channel ID is required'
-      }
-    }
   },
   client_first_name: {
     type: DataTypes.STRING(255),
     allowNull: false,
-    validate: {
-      notEmpty: {
-        msg: 'Client first name is required'
-      }
-    }
   },
   client_last_name: {
     type: DataTypes.STRING(255),
     allowNull: false,
-    validate: {
-      notEmpty: {
-        msg: 'Client last name is required'
-      }
-    }
   },
   client_rut: {
     type: DataTypes.STRING(20),
     allowNull: false,
-    validate: {
-      notEmpty: {
-        msg: 'Client RUT is required'
-      }
-    }
   },
   client_email: {
     type: DataTypes.STRING(255),
     allowNull: true,
-    validate: {
-      notEmpty: {
-        msg: 'Client email is required'
-      }
-    }
   },
   client_phone: {
     type: DataTypes.STRING(20)
@@ -119,12 +89,12 @@ const Sales = sequelize.define('Sales', {
   dispatcher_id: {
     type: DataTypes.INTEGER(11)
   },
-  createdAt: {
+  created_at: {
     type: DataTypes.DATE,
     allowNull: true,
     defaultValue: DataTypes.NOW,
   },
-  updatedAt: {
+  updated_at: {
     type: DataTypes.DATE,
     allowNull: true,
     defaultValue: DataTypes.NOW,
@@ -142,7 +112,7 @@ const Sales = sequelize.define('Sales', {
   },
 }, {
   tableName: 'Sales',
-  timestamps: true,
+  timestamps: false,
 });
 
 export default Sales;

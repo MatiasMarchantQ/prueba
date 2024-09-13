@@ -18,6 +18,22 @@ const getSuperAdminRoleId = async () => {
   return superAdminRoleId;
 };
 
+let executiveRoleId;
+
+const getExecutiveRoleId = async () => {
+  if (!executiveRoleId) {
+    const executiveRole = await Role.findOne({
+      where: { role_name: 'Ejecutivo' },
+      attributes: ['role_id'],
+    });
+    if (!executiveRole) {
+      throw new Error('Rol "Ejecutivo" no encontrado');
+    }
+    executiveRoleId = executiveRole.role_id;
+  }
+  return executiveRoleId;
+};
+
 export const isSuperAdmin = async (req, res, next) => {
   try {
     if (!req.user) {
@@ -36,7 +52,24 @@ export const isSuperAdmin = async (req, res, next) => {
   }
 };
 
-// Verificar token y autenticar usuario
+export const isExecutive = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'No autenticado' });
+    }
+
+    const roleId = await getExecutiveRoleId();
+    if (req.user.role_id !== roleId) {
+      return res.status(403).json({ message: 'No tienes permiso para acceder a esta ruta' });
+    }
+
+    next();
+  } catch (err) {
+    console.error('Error en isExecutive middleware:', err);
+    res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
 export const authenticate = async (req, res, next) => {
   const authHeader = req.header('Authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -63,4 +96,5 @@ export const authenticate = async (req, res, next) => {
 export default {
   authenticate,
   isSuperAdmin,
+  isExecutive,
 };

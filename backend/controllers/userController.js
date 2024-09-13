@@ -24,6 +24,27 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
+export const getMe = async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user) {
+      return res.status(404).send({ error: 'No se encontró el usuario autenticado' });
+    }
+    const userData = validateUser(user);
+    if (!userData) {
+      return res.status(400).send({ error: 'Datos del usuario inválidos' });
+    }
+    res.send(userData);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ error: 'Error interno del servidor' });
+  }
+};
+
+function validateUser(user) {
+  return user;
+}
+
 export const register = async (req, res) => {
   const { first_name, second_name, last_name, second_last_name, rut, email, password, phone_number, company_id, region_id, commune_id, street, number, department_office_floor, role_id, status, must_change_password } = req.body;
 
@@ -159,4 +180,5 @@ export default {
   getAllUsers,
   register,
   updateUser,
+  getMe,
 };
