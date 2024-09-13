@@ -1,7 +1,7 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db');
-const Region = require('./Regions');
-const User = require('./Users');
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/db.js';
+import Region from './Regions.js';
+import User from './Users.js';
 
 const Commune = sequelize.define('Commune', {
   commune_id: {
@@ -45,4 +45,4 @@ const Commune = sequelize.define('Commune', {
 Commune.belongsTo(Region, { foreignKey: 'region_id', as: 'region' });
 Commune.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifier' });
 
-module.exports = Commune;
+export default Commune;

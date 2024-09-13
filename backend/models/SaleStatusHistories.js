@@ -1,5 +1,5 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db');
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/db.js';
 
 const SaleHistory = sequelize.define('SaleHistory', {
   history_id: {
@@ -28,4 +28,4 @@ const SaleHistory = sequelize.define('SaleHistory', {
   }
 });
 
-module.exports = SaleHistory;
+export default SaleHistory;

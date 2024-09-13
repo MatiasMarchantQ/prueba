@@ -1,4 +1,4 @@
-const { Sales } = require('../models/Sales');
+import Sales from '../models/Sales.js';
 
 class SalesController {
   async createSale(req, res) {
@@ -13,7 +13,6 @@ class SalesController {
       });
     }
   }
-  
 
   async getSales(req, res) {
     try {
@@ -73,6 +72,4 @@ class SalesController {
   }
 }
 
-const salesController = new SalesController();
-
-module.exports = salesController;
+export default new SalesController();

@@ -1,13 +1,13 @@
-const jwt = require('jsonwebtoken');
-const { jwtSecret } = require('../config/config');
+import jwt from 'jsonwebtoken';
+import { jwtSecret } from '../config/config.js';
 
-function verifyToken(token) {
+const verifyToken = (token) => {
   return new Promise((resolve, reject) => {
     jwt.verify(token, jwtSecret, (err, decoded) => {
       if (err) return reject(err);
       resolve(decoded);
     });
   });
-}
+};
 
-module.exports = verifyToken;
+export default verifyToken;

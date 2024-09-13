@@ -1,10 +1,11 @@
-const express = require('express');
-const cors = require('cors');
+import express from 'express';
+import cors from 'cors';
+import authRoutes from './routes/authRoutes.js';
+import userRoutes from './routes/userRoutes.js';
+import salesRoutes from './routes/salesRoutes.js';
+import sequelize from './config/db.js';
+
 const app = express();
-const authRoutes = require('./routes/authRoutes');
-const userRoutes = require('./routes/userRoutes');
-const salesRoutes = require('./routes/salesRoutes');
-const sequelize = require('./config/db');
 
 app.use(express.json());
 app.use(cors());

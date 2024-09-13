@@ -1,6 +1,8 @@
-require('dotenv').config();
+import dotenv from 'dotenv';
 
-module.exports = {
+dotenv.config();
+
+export default {
   jwtSecret: process.env.JWT_SECRET,
   db: {
     name: process.env.DB_NAME,

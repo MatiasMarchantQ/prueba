@@ -1,10 +1,10 @@
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const User = require('../models/Users');
-const Region = require('../models/Regions');
-const Commune = require('../models/Communes');
-const Role = require('../models/Roles');
-const { Op } = require('sequelize');
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import User from '../models/Users.js';
+import Region from '../models/Regions.js';
+import Commune from '../models/Communes.js';
+import Role from '../models/Roles.js';
+import { Op } from 'sequelize';
 
 const getAdminRoleId = async () => {
   const adminRoleId = await Role.findOne({
@@ -14,7 +14,7 @@ const getAdminRoleId = async () => {
   return adminRoleId.role_id;
 };
 
-exports.getUser = async (req, res) => {
+export const getUser = async (req, res) => {
   const token = req.headers.authorization.split(' ')[1];
   const decodedToken = jwt.verify(token, process.env.SECRET_KEY);
   const userId = decodedToken.user_id;
@@ -33,7 +33,7 @@ exports.getUser = async (req, res) => {
   }
 };
 
-exports.register = async (req, res) => {
+export const register = async (req, res) => {
   const { first_name, second_name, last_name, second_last_name, rut, email, password, phone_number, company_id, region_id, commune_id, street, number, department_office_floor, role_id, status, must_change_password } = req.body;
 
   try {
@@ -91,7 +91,7 @@ exports.register = async (req, res) => {
   }
 };
 
-exports.getAllUsers = async (req, res) => {
+export const getAllUsers = async (req, res) => {
   try {
     const users = await User.findAll({
       attributes: [
@@ -123,7 +123,7 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
-exports.updateUser = async (req, res) => {
+export const updateUser = async (req, res) => {
   try {
     const authHeader = req.header('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -194,4 +194,11 @@ exports.updateUser = async (req, res) => {
     console.error(error);
     res.status(401).json({ message: 'Token inválido' });
   }
+};
+
+export default {
+  getUser,
+  register,
+  getAllUsers,
+  updateUser,
 };

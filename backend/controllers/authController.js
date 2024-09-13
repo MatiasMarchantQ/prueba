@@ -1,13 +1,12 @@
-const bcrypt = require('bcrypt');
-const nodemailer = require('nodemailer');
-const jwt = require('jsonwebtoken');
-const Users = require('../models/Users');
-const Role = require('../models/Roles');
-const dotenv = require('dotenv');
+import bcrypt from 'bcrypt';
+import nodemailer from 'nodemailer';
+import jwt from 'jsonwebtoken';
+import Users from '../models/Users.js';
+import Role from '../models/Roles.js';
+import dotenv from 'dotenv';
 dotenv.config();
 
-
-exports.login = async (req, res) => {
+export const login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
@@ -56,12 +55,12 @@ exports.login = async (req, res) => {
   }
 };
 
-exports.logout = async (req, res) => {
+export const logout = async (req, res) => {
   const token = req.headers['authorization'];
   if (!token || !token.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
-  
+
   const tokenValue = token.replace('Bearer ', '');
 
   try {
@@ -79,7 +78,7 @@ exports.logout = async (req, res) => {
   }
 };
 
-exports.changePassword = async (req, res) => {
+export const changePassword = async (req, res) => {
   const { password, confirmPassword } = req.body;
   const { token } = req.params;
 
@@ -112,7 +111,7 @@ exports.changePassword = async (req, res) => {
   }
 };
 
-exports.forgotPassword = async (req, res) => {
+export const forgotPassword = async (req, res) => {
   const { email } = req.body;
 
   try {
@@ -155,7 +154,7 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
-exports.resetPassword = async (req, res) => {
+export const resetPassword = async (req, res) => {
   const { token } = req.params;
   const { password, confirmPassword } = req.body;
 
@@ -181,4 +180,12 @@ exports.resetPassword = async (req, res) => {
     console.error(err);
     res.status(500).json({ message: 'Error del servidor' });
   }
+};
+
+export default {
+  login,
+  logout,
+  forgotPassword,
+  resetPassword,
+  changePassword,
 };

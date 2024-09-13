@@ -1,5 +1,5 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db');
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/db.js';
 
 const Priority = sequelize.define('Priority', {
   priority_id: {
@@ -19,4 +19,4 @@ const Priority = sequelize.define('Priority', {
   }
 });
 
-module.exports = Priority;
+export default Priority;

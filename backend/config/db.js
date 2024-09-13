@@ -1,5 +1,6 @@
-const { Sequelize } = require('sequelize');
-const dotenv = require('dotenv');
+import { Sequelize } from 'sequelize';
+import dotenv from 'dotenv';
+
 dotenv.config();
 
 const secretKey = process.env.SECRET_KEY;
@@ -26,4 +27,4 @@ const testConnection = async () => {
 
 testConnection();
 
-module.exports = sequelize;
+export default sequelize;

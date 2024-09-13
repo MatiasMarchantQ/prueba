@@ -1,5 +1,5 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db');
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/db.js';
 
 const SaleStatus = sequelize.define('SaleStatus', {
   sale_status_id: {
@@ -13,18 +13,24 @@ const SaleStatus = sequelize.define('SaleStatus', {
   description: {
     type: DataTypes.TEXT
   },
-  created_at: {
+  createdAt: {
     type: DataTypes.DATE,
+    allowNull: true,
     defaultValue: sequelize.literal('CURRENT_TIMESTAMP')
   },
-  updated_at: {
+  updatedAt: {
     type: DataTypes.DATE,
+    allowNull: true,
     defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
     onUpdate: sequelize.literal('CURRENT_TIMESTAMP')
   },
   modified_by_user_id: {
-    type: DataTypes.INTEGER(11)
+    type: DataTypes.INTEGER(11),
+    allowNull: true
   }
+}, {
+  tableName: 'SaleStatuses',
+  timestamps: true,
 });
 
-module.exports = SaleStatus;
+export default SaleStatus;

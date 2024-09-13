@@ -1,6 +1,6 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db');
-const User = require('./Users');
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/db.js';
+import User from './Users.js';
 
 const Region = sequelize.define('Region', {
   region_id: {
@@ -33,4 +33,4 @@ const Region = sequelize.define('Region', {
 
 Region.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifier' });
 
-module.exports = Region;
+export default Region;

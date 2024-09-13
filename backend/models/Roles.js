@@ -1,6 +1,6 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db');
-const User = require('./Users');
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/db.js';
+import User from './Users.js';
 
 const Role = sequelize.define('Role', {
   role_id: {
@@ -22,13 +22,13 @@ const Role = sequelize.define('Role', {
     onDelete: 'SET NULL',
     onUpdate: 'CASCADE',
   },
-  created_at: {
+  createdAt: {
     type: DataTypes.DATE,
     allowNull: true,
     defaultValue: DataTypes.NOW,
     field: 'created_at',
   },
-  updated_at: {
+  updatedAt: {
     type: DataTypes.DATE,
     allowNull: true,
     defaultValue: DataTypes.NOW,
@@ -42,4 +42,4 @@ const Role = sequelize.define('Role', {
 
 Role.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifier' });
 
-module.exports = Role;
+export default Role;

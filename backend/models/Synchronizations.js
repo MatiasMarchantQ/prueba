@@ -1,5 +1,5 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db');
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/db.js';
 
 const SaleSynchronization = sequelize.define('SaleSynchronization', {
   synchronization_id: {
@@ -22,4 +22,4 @@ const SaleSynchronization = sequelize.define('SaleSynchronization', {
   }
 });
 
-module.exports = SaleSynchronization;
+export default SaleSynchronization;

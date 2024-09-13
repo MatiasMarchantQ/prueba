@@ -1,5 +1,5 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db');
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/db.js';
 
 const Sales = sequelize.define('Sales', {
   sale_id: {
@@ -119,12 +119,12 @@ const Sales = sequelize.define('Sales', {
   dispatcher_id: {
     type: DataTypes.INTEGER(11)
   },
-  created_at: {
+  createdAt: {
     type: DataTypes.DATE,
     allowNull: true,
     defaultValue: DataTypes.NOW,
   },
-  updated_at: {
+  updatedAt: {
     type: DataTypes.DATE,
     allowNull: true,
     defaultValue: DataTypes.NOW,
@@ -141,8 +141,8 @@ const Sales = sequelize.define('Sales', {
     type: DataTypes.INTEGER(11)
   },
 }, {
-    tableName: 'Sales',
-    timestamps: false,
+  tableName: 'Sales',
+  timestamps: true,
 });
 
-module.exports = { Sales };
+export default Sales;

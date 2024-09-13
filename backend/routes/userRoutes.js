@@ -1,10 +1,10 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const userController = require('../controllers/userController');
-const authMiddleware = require('../middlewares/authMiddleware');
+import { getUser, register, getAllUsers, updateUser } from '../controllers/userController.js';
+import { authenticate, isAdmin, isEjecutivo, isConsultor, isDespachador, isValidador } from '../middlewares/authMiddleware.js';
 
-router.post('/register', authMiddleware.authenticate, authMiddleware.isAdmin, userController.register);
-router.get('/', authMiddleware.authenticate, authMiddleware.isAdmin, userController.getAllUsers);
-router.put('/:id', authMiddleware.authenticate, userController.updateUser);
+router.post('/register', authenticate, isAdmin, register);
+router.get('/', authenticate, isAdmin, getAllUsers);
+router.put('/:id', authenticate, updateUser);
 
-module.exports = router;
+export default router;

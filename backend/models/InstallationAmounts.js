@@ -1,5 +1,5 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db');
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/db.js';
 
 const InstallationAmount = sequelize.define('InstallationAmount', {
   installation_amount_id: {
@@ -27,4 +27,4 @@ const InstallationAmount = sequelize.define('InstallationAmount', {
   }
 });
 
-module.exports = InstallationAmount;
+export default InstallationAmount;
