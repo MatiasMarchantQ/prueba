@@ -1,6 +1,5 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
-import User from './Users.js';
 
 const Region = sequelize.define('Region', {
   region_id: {
@@ -20,17 +19,15 @@ const Region = sequelize.define('Region', {
     type: DataTypes.INTEGER,
     allowNull: true,
     references: {
-      model: User,
+      model: 'User',
       key: 'user_id',
     },
     onDelete: 'SET NULL',
     onUpdate: 'CASCADE',
   },
 }, {
-  tableName: 'Regions',
+  tableName: 'regions',
   timestamps: false,
 });
-
-Region.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifier' });
 
 export default Region;

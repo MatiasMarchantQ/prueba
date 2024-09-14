@@ -14,25 +14,25 @@ const Role = sequelize.define('Role', {
   modified_by_user_id: {
     type: DataTypes.INTEGER,
     allowNull: true,
-    onDelete: 'SET NULL',
-    onUpdate: 'CASCADE',
+    references: {
+      model: 'User',
+      key: 'user_id',
+    },
   },
-  createdAt: {
+  created_at: {
     type: DataTypes.DATE,
     allowNull: true,
     defaultValue: DataTypes.NOW,
-    field: 'created_at',
   },
-  updatedAt: {
+  update_at: {
     type: DataTypes.DATE,
     allowNull: true,
     defaultValue: DataTypes.NOW,
     onUpdate: DataTypes.NOW,
-    field: 'updated_at',
   },
 }, {
-  tableName: 'Roles',
-  timestamps: true,
+  tableName: 'roles',
+  timestamps: false,
 });
 
 export default Role;

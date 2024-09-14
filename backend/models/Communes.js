@@ -1,7 +1,5 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
-import Region from './Regions.js';
-import User from './Users.js';
 
 const Commune = sequelize.define('Commune', {
   commune_id: {
@@ -21,7 +19,7 @@ const Commune = sequelize.define('Commune', {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: Region,
+      model: "Region",
       key: 'region_id',
     },
     onDelete: 'CASCADE',
@@ -31,18 +29,16 @@ const Commune = sequelize.define('Commune', {
     type: DataTypes.INTEGER,
     allowNull: true,
     references: {
-      model: User,
+      model: "User",
       key: 'user_id',
     },
     onDelete: 'SET NULL',
     onUpdate: 'CASCADE',
   },
 }, {
-  tableName: 'Communes',
+  tableName: 'communes',
   timestamps: false,
 });
 
-Commune.belongsTo(Region, { foreignKey: 'region_id', as: 'region' });
-Commune.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifier' });
 
 export default Commune;

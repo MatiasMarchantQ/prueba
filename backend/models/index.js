@@ -1,13 +1,21 @@
-import sequelize from '../config/db.js'; 
-import User from './Users.js';  // Asegúrate de que el nombre coincide con tu archivo de modelo
+import { Sequelize } from 'sequelize';
+import config from '../config/config.js'; // Asegúrate de importar correctamente la configuración
+import User from './Users.js';
 import Role from './Roles.js';
+import SalesChannel from './SalesChannels.js';
+import Company from './Companies.js';
 import Region from './Regions.js';
 import Commune from './Communes.js';
-import Company from './Companies.js';
-import SalesChannel from './SalesChannels.js';
+import Sales from './Sales.js';
+import SaleHistory from './SaleStatusHistories.js';
+import CompanyPriority from './CompanyPriorities.js';
 import Audit from './Audit.js';
+import SaleStatus from './SaleStatuses.js';
+import InstallationAmount from './InstallationAmounts.js';
+import Promotion from './Promotions.js';
+import PromotionCommune from './PromotionsCommunes.js';
 
-
+// Instancia única de Sequelize
 const sequelize = new Sequelize(
   config.db.name,
   config.db.user,
@@ -18,47 +26,53 @@ const sequelize = new Sequelize(
   }
 );
 
-User.hasMany(Audit, { foreignKey: 'user_id', as: 'audits' });
-Audit.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 User.belongsTo(Role, { foreignKey: 'role_id', as: 'role' });
-Role.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifiedBy' });
+Role.hasMany(User, { foreignKey: 'role_id', as: 'users' });
+User.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifiedByUser' });
+
+User.belongsTo(SalesChannel, { foreignKey: 'sales_channel_id', as: 'salesChannel' });
+User.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
 User.belongsTo(Region, { foreignKey: 'region_id', as: 'region' });
 User.belongsTo(Commune, { foreignKey: 'commune_id', as: 'commune' });
-User.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
-User.belongsTo(SalesChannel, { foreignKey: 'sales_channel_id', as: 'salesChannel' });
 
-SalesChannel.hasMany(Sales, { foreignKey: 'sales_channel_id', as: 'sales' });
+Audit.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+SaleHistory.belongsTo(Sales, { foreignKey: 'sale_id', as: 'sale' });
+SaleHistory.belongsTo(SaleStatus, { foreignKey: 'previous_status_id', as: 'previousStatus' });
+SaleHistory.belongsTo(SaleStatus, { foreignKey: 'new_status_id', as: 'newStatus' });
+SaleHistory.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifiedByUser' });
+SaleStatus.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifiedByUser' });
+SalesChannel.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifiedByUser' });
 Sales.belongsTo(SalesChannel, { foreignKey: 'sales_channel_id', as: 'salesChannel' });
-
-Region.hasMany(Sales, { foreignKey: 'region_id', as: 'sales' });
 Sales.belongsTo(Region, { foreignKey: 'region_id', as: 'region' });
-
-Commune.hasMany(Sales, { foreignKey: 'commune_id', as: 'sales' });
 Sales.belongsTo(Commune, { foreignKey: 'commune_id', as: 'commune' });
-
-Promotion.hasMany(Sales, { foreignKey: 'promotion_id', as: 'sales' });
 Sales.belongsTo(Promotion, { foreignKey: 'promotion_id', as: 'promotion' });
-
-InstallationAmount.hasMany(Sales, { foreignKey: 'installation_amount_id', as: 'sales' });
 Sales.belongsTo(InstallationAmount, { foreignKey: 'installation_amount_id', as: 'installationAmount' });
-
-SaleStatus.hasMany(Sales, { foreignKey: 'sale_status_id', as: 'sales' });
 Sales.belongsTo(SaleStatus, { foreignKey: 'sale_status_id', as: 'saleStatus' });
-
-Executive.hasMany(Sales, { foreignKey: 'executive_id', as: 'sales' });
-Sales.belongsTo(Executive, { foreignKey: 'executive_id', as: 'executive' });
-
-Validator.hasMany(Sales, { foreignKey: 'validator_id', as: 'sales' });
-Sales.belongsTo(Validator, { foreignKey: 'validator_id', as: 'validator' });
-
-Dispatcher.hasMany(Sales, { foreignKey: 'dispatcher_id', as: 'sales' });
-Sales.belongsTo(Dispatcher, { foreignKey: 'dispatcher_id', as: 'dispatcher' });
-
-Company.hasMany(Sales, { foreignKey: 'company_id', as: 'sales' });
+Sales.belongsTo(User, { foreignKey: 'executive_id', as: 'executive' });
+Sales.belongsTo(User, { foreignKey: 'validator_id', as: 'validator' });
+Sales.belongsTo(User, { foreignKey: 'dispatcher_id', as: 'dispatcher' });
+Sales.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifiedByUser' });
 Sales.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
+Sales.belongsTo(CompanyPriority, { foreignKey: 'company_priority_id', as: 'companypriority' });
 
-CompanyPriority.hasMany(Sales, { foreignKey: 'company_priority_id', as: 'sales' });
-Sales.belongsTo(CompanyPriority, { foreignKey: 'company_priority_id', as: 'companyPriority' });
+Role.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifiedByUser' });
 
-export { User, Role, Region, Commune, Company, SalesChannel, Audit };
+Region.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifier' });
+
+Commune.belongsTo(Region, { foreignKey: 'region_id', as: 'region' });
+Commune.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifier' });
+
+Promotion.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifier' });
+Promotion.belongsTo(InstallationAmount, { foreignKey: 'installation_amount_id', as: 'installationAmount' });
+
+InstallationAmount.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifier' });
+
+CompanyPriority.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
+
+PromotionCommune.belongsTo(Promotion, { foreignKey: 'promotion_id' });
+PromotionCommune.belongsTo(Commune, { foreignKey: 'commune_id' });
+
+
+export { User, Role, SalesChannel, Company, Region, Commune, Sales, SaleHistory, CompanyPriority, Audit, SaleStatus, InstallationAmount, Promotion, PromotionCommune };
 export default sequelize;

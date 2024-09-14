@@ -1,8 +1,8 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 
-const Priority = sequelize.define('Priority', {
-  priority_id: {
+const CompanyPriority = sequelize.define('CompanyPriority', {
+  company_priority_id: {
     type: DataTypes.INTEGER(11),
     primaryKey: true,
     autoIncrement: true
@@ -12,11 +12,17 @@ const Priority = sequelize.define('Priority', {
     references: {
       model: 'Company',
       key: 'company_id'
-    }
+    },
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE'
   },
   priority_level: {
     type: DataTypes.INTEGER(11)
   }
+}, {
+  tableName: 'companypriorities',
+  timestamps: false,
 });
 
-export default Priority;
+
+export default CompanyPriority;

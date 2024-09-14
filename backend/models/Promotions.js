@@ -7,27 +7,42 @@ const Promotion = sequelize.define('Promotion', {
     primaryKey: true,
     autoIncrement: true
   },
-  description: {
+  promotion: {
     type: DataTypes.TEXT
   },
-  commune_id: {
-    type: DataTypes.INTEGER(11)
+  installation_amount_id: {
+    type: DataTypes.INTEGER,
+    references: {
+      model: 'InstallationAmount',
+      key: 'installation_amount_id'
+    },
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE'
   },
-  installation_amount: {
-    type: DataTypes.DECIMAL(10, 2)
+  modified_by_user_id: {
+    type: DataTypes.INTEGER(11),
+    references: {
+      model: 'User',
+      key: 'user_id'
+    },
+    onDelete: 'SET NULL',
+    onUpdate: 'CASCADE'
   },
   created_at: {
     type: DataTypes.DATE,
-    defaultValue: sequelize.literal('CURRENT_TIMESTAMP')
+    defaultValue: DataTypes.NOW,
   },
   updated_at: {
     type: DataTypes.DATE,
-    defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
-    onUpdate: sequelize.literal('CURRENT_TIMESTAMP')
+    defaultValue: DataTypes.NOW,
+    onUpdate: DataTypes.NOW,
   },
   modified_by_user_id: {
     type: DataTypes.INTEGER(11)
-  }
+  },
+}, {
+  tableName: 'promotions',
+  timestamps: false,
 });
 
 export default Promotion;

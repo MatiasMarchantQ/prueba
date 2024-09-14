@@ -11,6 +11,11 @@ const Company = sequelize.define('Company', {
     type: DataTypes.STRING(255),
     index: true
   }
+}, {
+  tableName: 'companies',
+  timestamps: false,
 });
+
+
 
 export default Company;

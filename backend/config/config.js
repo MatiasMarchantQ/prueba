@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export default {
-  jwtSecret: process.env.JWT_SECRET,
+  jwtSecret: process.env.SECRET_KEY,
   db: {
     name: process.env.DB_NAME,
     user: process.env.DB_USER,

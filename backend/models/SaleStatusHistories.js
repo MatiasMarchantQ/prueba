@@ -8,7 +8,11 @@ const SaleHistory = sequelize.define('SaleHistory', {
     autoIncrement: true
   },
   sale_id: {
-    type: DataTypes.INTEGER(11)
+    type: DataTypes.INTEGER,
+    references: {
+      model: 'Sales',
+      key: 'sale_id',
+    },
   },
   previous_status_id: {
     type: DataTypes.INTEGER(11)
@@ -20,7 +24,12 @@ const SaleHistory = sequelize.define('SaleHistory', {
     type: DataTypes.TEXT
   },
   modified_by_user_id: {
-    type: DataTypes.INTEGER(11)
+    type: DataTypes.INTEGER(11),
+    allowNull: true,
+    references: {
+      model: 'User',
+      key: 'user_id',
+    },
   },
   modification_date: {
     type: DataTypes.DATE,

@@ -13,12 +13,12 @@ const SalesChannel = sequelize.define('SalesChannel', {
   description: {
     type: DataTypes.TEXT
   },
-  createdAt: {
+  created_at: {
     type: DataTypes.DATE,
     allowNull: true,
     defaultValue: DataTypes.NOW,
   },
-  updatedAt: {
+  updated_at: {
     type: DataTypes.DATE,
     allowNull: true,
     defaultValue: DataTypes.NOW,
@@ -27,10 +27,14 @@ const SalesChannel = sequelize.define('SalesChannel', {
   modified_by_user_id: {
     type: DataTypes.INTEGER(11),
     allowNull: true,
+    references: {
+      model: 'User',
+      key: 'user_id',
+    },
   },
 }, {
-  tableName: 'SalesChannels',
-  timestamps: true,
+  tableName: 'saleschannels',
+  timestamps: false,
 });
 
 export default SalesChannel;

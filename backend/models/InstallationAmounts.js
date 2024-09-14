@@ -7,24 +7,34 @@ const InstallationAmount = sequelize.define('InstallationAmount', {
     primaryKey: true,
     autoIncrement: true
   },
-  amount_name: {
-    type: DataTypes.STRING(100)
-  },
   amount: {
-    type: DataTypes.DECIMAL(10, 2)
+    type: DataTypes.STRING,
   },
   created_at: {
     type: DataTypes.DATE,
-    defaultValue: sequelize.literal('CURRENT_TIMESTAMP')
+    defaultValue: DataTypes.NOW,
   },
   updated_at: {
     type: DataTypes.DATE,
-    defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
-    onUpdate: sequelize.literal('CURRENT_TIMESTAMP')
+    defaultValue: DataTypes.NOW,
+    onUpdate: DataTypes.NOW,
   },
   modified_by_user_id: {
-    type: DataTypes.INTEGER(11)
-  }
+    type: DataTypes.TINYINT,
+    references: {
+      model: 'User',
+      key: 'user_id'
+    },
+    onDelete: 'SET NULL',
+    onUpdate: 'CASCADE'
+  },
+  is_active: {
+    type: DataTypes.TINYINT,
+    allowNull: false,
+  },
+}, {
+  tableName: 'installationamounts',
+  timestamps: false,
 });
 
 export default InstallationAmount;

@@ -13,24 +13,28 @@ const SaleStatus = sequelize.define('SaleStatus', {
   description: {
     type: DataTypes.TEXT
   },
-  createdAt: {
+  created_at: {
     type: DataTypes.DATE,
     allowNull: true,
-    defaultValue: sequelize.literal('CURRENT_TIMESTAMP')
+    defaultValue: DataTypes.NOW,
   },
-  updatedAt: {
+  updated_at: {
     type: DataTypes.DATE,
     allowNull: true,
-    defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
-    onUpdate: sequelize.literal('CURRENT_TIMESTAMP')
+    defaultValue: DataTypes.NOW,
+    onUpdate: DataTypes.NOW,
   },
   modified_by_user_id: {
     type: DataTypes.INTEGER(11),
-    allowNull: true
+    allowNull: true,
+    references: {
+      model: 'User',
+      key: 'user_id',
+    },
   }
 }, {
-  tableName: 'SaleStatuses',
-  timestamps: true,
+  tableName: 'salestatuses',
+  timestamps: false,
 });
 
 export default SaleStatus;

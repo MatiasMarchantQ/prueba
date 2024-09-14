@@ -25,11 +25,13 @@ const User = sequelize.define('User', {
   },
   rut: {
     type: DataTypes.STRING,
+    unique: true,
     allowNull: false,
     unique: true,
   },
   email: {
     type: DataTypes.STRING,
+    unique: true,
     allowNull: false,
     unique: true,
   },
@@ -44,18 +46,34 @@ const User = sequelize.define('User', {
   sales_channel_id: {
     type: DataTypes.INTEGER,
     allowNull: true,
+    references: {
+      model: 'SalesChannel',
+      key: 'sales_channel_id',
+    },
   },
   company_id: {
     type: DataTypes.INTEGER,
-    allowNull: true,
+    allowNull: false,
+    references: {
+      model: 'Company',
+      key: 'company_id',
+    },
   },
   region_id: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    references: {
+      model: 'Region',
+      key: 'region_id',
+    },
   },
   commune_id: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    references: {
+      model: 'Commune',
+      key: 'commune_id',
+    },
   },
   street: {
     type: DataTypes.STRING,
@@ -72,6 +90,10 @@ const User = sequelize.define('User', {
   role_id: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    references: {
+      model: 'Role',
+      key: 'role_id',
+    }
   },
   status: {
     type: DataTypes.INTEGER,
@@ -95,11 +117,14 @@ const User = sequelize.define('User', {
   modified_by_user_id: {
     type: DataTypes.INTEGER,
     allowNull: true,
-  },
+    references: {
+      model: 'User',
+      key: 'user_id',
+    },
+  }
 }, {
-  tableName: 'Users',
+  tableName: 'users',
   timestamps: false,
 });
 
 export default User;
-
