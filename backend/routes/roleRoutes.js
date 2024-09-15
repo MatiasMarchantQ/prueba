@@ -4,6 +4,6 @@ import { getRoles } from '../controllers/roleController.js';
 
 const router = express.Router();
 
-router.get('/roles', getRoles);
+router.get('/', getRoles);
 
 export default router;

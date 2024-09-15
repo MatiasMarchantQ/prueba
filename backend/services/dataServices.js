@@ -15,6 +15,15 @@ import {
     Promotion 
   } from '../models/index.js';
 
+  export const fetchRegionById = async (id) => {
+    try {
+      return await Region.findByPk(id);
+    } catch (error) {
+      console.error('Error fetching region by id:', error);
+      throw new Error('Error fetching region by id');
+    }
+  }
+
   export const fetchPromotionCommunes = async () => {
     try {
       return await PromotionCommune.findAll({
@@ -240,4 +249,8 @@ import {
       console.error('Error fetching all data:', error);
       throw new Error('Error fetching all data');
     }
+  };
+
+  export default {
+    fetchRegionById,
   };

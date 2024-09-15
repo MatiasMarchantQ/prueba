@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
+import SaleHistory from './SaleHistories.js';
 
 const Sales = sequelize.define('Sales', {
   sale_id: {
@@ -13,7 +14,7 @@ const Sales = sequelize.define('Sales', {
   },
   entry_date: {
     type: DataTypes.DATE,
-    defaultValue: sequelize.literal('CURRENT_TIMESTAMP')
+    defaultValue: DataTypes.NOW,
   },
   sales_channel_id: {
     type: DataTypes.INTEGER(11),
@@ -91,7 +92,8 @@ const Sales = sequelize.define('Sales', {
     type: DataTypes.TEXT
   },
   id_card_image: {
-    type: DataTypes.STRING(255)
+    type: DataTypes.JSON,
+    allowNull: true,
   },
   simple_power_image: {
     type: DataTypes.STRING(255)
@@ -161,8 +163,44 @@ const Sales = sequelize.define('Sales', {
     },
   },
 }, {
+  hooks: {
+    afterCreate: async (sale, options) => {
+      await SaleHistory.create({
+        sale_id: sale.sale_id,
+        new_status_id: sale.sale_status_id, // El estado inicial
+        modified_by_user_id: sale.modified_by_user_id // Asume que sale tiene user_id, si no ajusta de acuerdo a tu lógica
+      });
+    },
+
+    afterUpdate: async (sale, options) => {
+      const lastHistory = await SaleHistory.findOne({
+        where: { sale_id: sale.sale_id },
+        order: [['modification_date', 'DESC']] // Busca el último registro de historial
+      });
+
+      if (lastHistory) {
+        // Crea un nuevo registro en el historial con el estado actual
+        await SaleHistory.create({
+          sale_id: sale.sale_id,
+          previous_status_id: lastHistory.new_status_id, // El estado anterior
+          new_status_id: sale.sale_status_id, // El nuevo estado
+          modified_by_user_id: sale.modified_by_user_id, // El usuario que modifica la venta
+          modification_date: new Date() // La fecha y hora actual
+        });
+      } else {
+        // Si no hay historial previo, se crea el primer registro
+        await SaleHistory.create({
+          sale_id: sale.sale_id,
+          previous_status_id: null, // Sin estado anterior
+          new_status_id: sale.sale_status_id, // El nuevo estado
+          modified_by_user_id: sale.modified_by_user_id, // El usuario que modifica la venta
+          modification_date: new Date() // La fecha y hora actual
+        });
+      }
+    }
+  },
   tableName: 'sales',
-  timestamps: false,
+  timestamps: false 
 });
 
 export default Sales;

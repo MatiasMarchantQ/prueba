@@ -35,6 +35,9 @@ const SaleHistory = sequelize.define('SaleHistory', {
     type: DataTypes.DATE,
     defaultValue: sequelize.literal('CURRENT_TIMESTAMP')
   }
+}, {
+  tableName: 'salehistories',
+  timestamps: false,
 });
 
 export default SaleHistory;

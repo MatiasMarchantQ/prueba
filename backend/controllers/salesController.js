@@ -7,10 +7,20 @@ import InstallationAmount from '../models/InstallationAmounts.js';
 import Promotion from '../models/Promotions.js';
 import PromotionCommune from '../models/PromotionsCommunes.js';
 import CompanyPriority from '../models/CompanyPriorities.js';
+import path from 'path';
+import fs from 'fs';
+import { fetchRegionById } from '../services/dataServices.js';
 import { Op } from 'sequelize';
+import { Sequelize, DataTypes } from 'sequelize';
+import nodemailer from 'nodemailer';
 
 export const createSale = async (req, res) => {
   try {
+    const reqBody = Object.keys(req.body).reduce((acc, key) => {
+      acc[key.trim()] = req.body[key];
+      return acc;
+    }, {});
+
     const {
       service_id,
       entry_date,
@@ -29,25 +39,47 @@ export const createSale = async (req, res) => {
       promotion_id,
       additional_comments,
       id_card_image,
-      simple_power_image,
-      house_image,
       validator_id,
       dispatcher_id,
-    } = req.body;
+    } = reqBody;
 
-    // Verificar que la region_id sea válida
-    const region = await Region.findByPk(region_id);
+    const files = req.files;
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({ message: 'No files provided' });
+    }
+
+    const idCardImages = files
+      .filter(file => file && file.path)
+      .map(file => {
+        const ext = path.extname(file.originalname);
+        const newFileName = `${client_rut}${ext}`;
+        const newFilePath = path.join(path.dirname(file.path), newFileName);
+
+        fs.renameSync(file.path, newFilePath);
+
+        return newFilePath;
+      });
+
+    if (idCardImages.length === 0) {
+      return res.status(400).json({ message: 'No valid id card images provided' });
+    }
+
+    const region = await fetchRegionById(region_id);
     if (!region) {
       return res.status(400).json({ message: 'La región seleccionada no existe' });
     }
 
-    // Obtener las comunas asociadas a la región seleccionada
-    const commune = await Commune.findByPk(commune_id);
-    if (!commune || commune.region_id !== region_id) {
+    const commune = await Commune.findOne({
+      where: {
+        commune_id: commune_id,
+        region_id: region_id
+      }
+    });
+    if (!commune) {
       return res.status(400).json({ message: 'La comuna seleccionada no existe o no está asociada a la región' });
     }
 
-    // Verificar la promoción y obtener el installation_amount_id
     const promotion = await Promotion.findByPk(promotion_id);
     if (!promotion) {
       return res.status(400).json({ message: 'La promoción seleccionada no existe' });
@@ -55,20 +87,22 @@ export const createSale = async (req, res) => {
 
     const installationAmountId = promotion.installation_amount_id;
 
-    // Obtener el usuario actual
     const currentUser = await User.findByPk(req.user.user_id);
     if (!currentUser) {
       return res.status(400).json({ message: 'Usuario no encontrado' });
     }
 
+    if (!req.user || !req.user.user_id) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
     const companyId = currentUser.company_id;
 
-    // Obtener el priority_level asociado al company_id
     const Priority = await CompanyPriority.findOne({
       where: {
         company_id: companyId,
       },
-      order: [['priority_level', 'ASC']], // Ajusta el orden según tu necesidad
+      order: [['priority_level', 'ASC']],
     });
 
     if (!Priority) {
@@ -77,28 +111,212 @@ export const createSale = async (req, res) => {
 
     const companyPriorityId = Priority.priority_level;
 
-    // Asignar executive_id solo si el rol es 3 (ejecutivo)
     let executiveId = null;
     if (currentUser.role_id === 3) {
-      executiveId = currentUser.user_id; // Usar el user_id del ejecutivo
+      executiveId = currentUser.user_id;
     }
 
-    // Verificar que el RUT sea único
     const existingRut = await Sales.findOne({ where: { client_rut } });
     if (existingRut) {
       return res.status(400).json({ message: 'El RUT ya existe en la base de datos' });
     }
 
-    // Verificar que el email sea único
     const existingEmail = await Sales.findOne({ where: { client_email } });
     if (existingEmail) {
       return res.status(400).json({ message: 'El email ya existe en la base de datos' });
     }
 
     const saleData = {
-      service_id,
+      service_id: service_id || null,
       entry_date,
       sales_channel_id: 1,
+      client_first_name,
+      client_last_name,
+      client_rut,
+      client_email,
+      client_phone,
+      client_secondary_phone: client_secondary_phone || null,
+      region_id,
+      commune_id,
+      street: street || null,
+      number: number || null,
+      department_office_floor: department_office_floor || null,
+      geo_reference,
+      promotion_id,
+      installation_amount_id: installationAmountId,
+      additional_comments: additional_comments || null,
+      id_card_image: JSON.stringify(idCardImages) || null,
+      sale_status_id: 1,
+      executive_id: executiveId,
+      validator_id: null,
+      dispatcher_id: null,
+      company_id: companyId,
+      company_priority_id: companyPriorityId,
+      id_card_image: idCardImages,
+      modified_by_user_id: req.user.user_id
+    };
+
+    const sale = await Sales.create(saleData);
+
+    if (saleData.sale_status_id === 1) {
+      // Configura el transporte de correo
+      const transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASSWORD
+        }
+      });
+      
+      const salesChannel = await SalesChannel.findOne({
+          where: { sales_channel_id: saleData.sales_channel_id } // Usa el ID del canal desde saleData
+      });
+    
+      // Define los valores necesarios
+      const commune = await Commune.findOne({
+        where: { commune_id: sale.commune_id } // Asegúrate de que saleData contiene commune_id
+      });
+      const communeName = commune ? commune.commune_name : 'Comuna no disponible';
+      // O consulta a la base de datos si es necesario
+      const promotion = await Promotion.findOne({
+        where: { promotion_id: sale.promotion_id }
+      });      
+      const installationAmount = await InstallationAmount.findOne({
+        where: { installation_amount_id: promotion.installation_amount_id }
+      });
+      const executiveName = currentUser ? `${currentUser.first_name} ${currentUser.last_name}` : 'Ejecutivo no asignado';
+      const subject = `${client_last_name}, ${client_first_name} - ${executiveName} - ${communeName} - ${salesChannel ? salesChannel.channel_name : 'Canal no disponible'}`;
+      const formattedDate = new Date(entry_date).toLocaleDateString('es-CL'); // Formato dd-mm-aaaa
+    
+      const message = `
+        <p>Estimado/a,</p>
+        <p>Se ha registrado una nueva venta en el sistema.</p>
+        <p><strong>Detalles de la Venta:</strong></p>
+        <ul>
+          <li><strong>Fecha:</strong> ${formattedDate}</li>
+          <li><strong>Nombre del Cliente:</strong> ${client_first_name} ${client_last_name}</li>
+          <li><strong>RUT del Cliente:</strong> ${client_rut}</li>
+          <li><strong>Teléfono del Cliente:</strong> ${client_phone}</li>
+          <li><strong>Email del Cliente:</strong> ${client_email}</li>
+          <li><strong>Dirección:</strong> ${street ? `${street} ${number}` : 'No proporcionada'}</li>
+          <li><strong>Comuna:</strong> ${communeName}</li>
+          <li><strong>Monto de instalación:</strong> ${installationAmount ? installationAmount.amount : 'No disponible'}</li>
+          <li><strong>Promoción:</strong> ${promotion ? promotion.promotion : 'Promoción no disponible'}</li>
+          <li><strong>Referencia Geográfica:</strong> ${geo_reference}</li>
+          <li><strong>Nombre del Ejecutivo:</strong> ${executiveName}</li>
+        </ul>
+        <p>Por favor, revise el Canal Ventas ISP.</p>
+        <p>Saludos cordiales,</p>
+        <p>El equipo de ventas</p>
+      `;
+    
+      // Envía el correo
+      await transporter.sendMail({
+        from: 'tu-email@gmail.com',
+        to: 'internetsolicitudes@gmail.com',
+        subject: subject,
+        html: message
+      });
+    }
+    
+
+
+    res.status(201).json(sale);
+  } catch (error) {
+    console.error('Error details:', error);
+    res.status(500).json({ message: 'Error creating sale', error: error.message });
+  }
+};
+
+export const getSales = async (req, res) => {
+  try {
+    const sales = await Sales.findAll();
+    res.json(sales);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error fetching sales' });
+  }
+};
+
+export const getExecutiveSales = async (req, res) => {
+  try {
+    // Obtén el user_id del usuario autenticado
+    const userId = req.user.user_id;
+
+    // Obtener el company_id del usuario autenticado desde la tabla User
+    const user = await User.findByPk(userId, {
+      attributes: ['company_id'], // Solo necesitas company_id para la consulta
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const companyId = user.company_id;
+
+    // Verificar si el user_id es un executive_id en la tabla Sales
+    const sales = await Sales.findAll({
+      where: {
+        executive_id: userId,
+        company_id: companyId,
+      },
+      attributes: [
+        'sale_id',
+        'service_id',
+        'entry_date',
+        'sales_channel_id',
+        'client_first_name',
+        'client_last_name',
+        'client_rut',
+        'client_email',
+        'client_phone',
+        'client_secondary_phone',
+        'region_id',
+        'commune_id',
+        'street',
+        'number',
+        'department_office_floor',
+        'geo_reference',
+        'promotion_id',
+        'installation_amount_id',
+        'additional_comments',
+        'id_card_image',
+        'simple_power_image',
+        'house_image',
+        'sale_status_id',
+        'executive_id',
+        'validator_id',
+        'dispatcher_id',
+        'created_at',
+        'updated_at',
+        'modified_by_user_id',
+        'company_id',
+        'company_priority_id',
+      ],
+    });
+
+    if (sales.length === 0) {
+      return res.status(404).json({ message: 'No sales found for the executive in this company' });
+    }
+
+    res.json(sales);
+  } catch (error) {
+    console.error('Error fetching executive sales:', error);
+    res.status(500).json({ message: 'Error fetching executive sales', error: error.message });
+  }
+};
+// Asegúrate de tener esta función o ajusta según tu implementación
+
+export const updateSale = async (req, res) => {
+  try {
+    const userId = req.user.user_id; // ID del usuario autenticado
+    const roleId = req.user.role_id; // Rol del usuario autenticado
+    const saleId = req.params.sale_id; // ID de la venta a actualizar
+
+    const {
+      service_id,
       client_first_name,
       client_last_name,
       client_rut,
@@ -112,89 +330,211 @@ export const createSale = async (req, res) => {
       department_office_floor,
       geo_reference,
       promotion_id,
-      installation_amount_id: installationAmountId,
       additional_comments,
-      id_card_image,
-      simple_power_image,
-      house_image,
-      sale_status_id: 1,
-      executive_id: executiveId,
-      validator_id: null,
-      dispatcher_id: null,
-      company_id: companyId,
-      company_priority_id: companyPriorityId,
+      sale_status_id
+    } = req.body;
+
+    // Verifica que la venta exista
+    const sale = await Sales.findByPk(saleId);
+    if (!sale) {
+      return res.status(404).json({ message: 'Venta no encontrada' });
+    }
+
+    // Verifica permisos para actualizar
+    if (sale.sale_status_id === 1) {
+      // Estado 1: Validador puede actualizar a 2, 3, 4 o 7
+      if (roleId !== 4) { // Rol 4 es Validador
+        return res.status(403).json({ message: 'No tienes permisos para actualizar esta venta' });
+      }
+    } else if (sale.sale_status_id === 3) {
+      // Estado 3: Validador puede actualizar a 2, 4 o 7
+      if (roleId !== 4) {
+        return res.status(403).json({ message: 'No tienes permisos para actualizar esta venta' });
+      }
+    } else if (sale.sale_status_id === 4) {
+      // Estado 4: Solo el Ejecutivo que creó la venta puede actualizarla
+      if (roleId !== 3 || sale.executive_id !== userId) { // Rol 3 es Ejecutivo
+        return res.status(403).json({ message: 'No tienes permisos para actualizar esta venta' });
+      }
+    } else if (sale.sale_status_id === 2) {
+      // Estado 2: Despachador puede actualizar a 1, 2, o 7
+      if (roleId !== 5) { // Rol 5 es Despachador
+        return res.status(403).json({ message: 'No tienes permisos para actualizar esta venta' });
+      }
+    } else if (sale.sale_status_id === 7) {
+      // Estado 7: Solo puede ser visto o filtrado, no actualizado.
+      return res.status(403).json({ message: 'No puedes actualizar esta venta, ya está archivada' });
+    } else {
+      // Otros roles como SuperAdmin y Administrador tienen permisos generales
+      if (![1, 2].includes(roleId)) { // Roles 1 y 2 son SuperAdmin y Administrador
+        return res.status(403).json({ message: 'No tienes permisos para actualizar esta venta' });
+      }
+    }
+
+    // Verifica la validez de la región, comuna y promoción
+    if (region_id) {
+      const region = await fetchRegionById(region_id);
+      if (!region) {
+        return res.status(400).json({ message: 'La región seleccionada no existe' });
+      }
+      
+      const commune = await Commune.findOne({ where: { commune_id, region_id } });
+      if (!commune) {
+        return res.status(400).json({ message: 'La comuna seleccionada no existe o no está asociada a la región' });
+      }
+    }
+
+    if (promotion_id) {
+      const promotion = await Promotion.findByPk(promotion_id);
+      if (!promotion) {
+        return res.status(400).json({ message: 'La promoción seleccionada no existe' });
+      }
+    }
+
+    // Actualiza el validator_id si el estado es 2
+    let validator_id = sale.validator_id;
+    if (sale_status_id === 2) {
+      validator_id = userId;
+    }
+
+    // Verifica que el email y RUT sean únicos si se actualizan
+    if (client_email && client_email !== sale.client_email) {
+      const existingEmail = await Sales.findOne({ where: { client_email } });
+      if (existingEmail) {
+        return res.status(400).json({ message: 'El email ya existe en la base de datos' });
+      }
+    }
+
+    if (client_rut && client_rut !== sale.client_rut) {
+      const existingRut = await Sales.findOne({ where: { client_rut } });
+      if (existingRut) {
+        return res.status(400).json({ message: 'El RUT ya existe en la base de datos' });
+      }
+    }
+
+    // Prepara los datos para la actualización
+    const updatedSaleData = {
+      service_id: service_id || null,
+      client_first_name,
+      client_last_name,
+      client_rut,
+      client_email,
+      client_phone,
+      client_secondary_phone: client_secondary_phone || null,
+      region_id,
+      commune_id,
+      street: street || null,
+      number,
+      department_office_floor: department_office_floor || null,
+      geo_reference,
+      promotion_id,
+      additional_comments: additional_comments || null,
+      sale_status_id,
+      validator_id,
+      modified_by_user_id: userId
     };
 
-    const sale = await Sales.create(saleData);
-    res.status(201).json(sale);
+    await sale.update(updatedSaleData);
+
+    res.status(200).json({ message: 'Venta actualizada con éxito', sale });
   } catch (error) {
     console.error('Error details:', error);
-    res.status(500).json({ message: 'Error creating sale', error: error.message });
+    res.status(500).json({ message: 'Error al actualizar la venta', error: error.message });
   }
 };
 
 
-export const getSales = async (req, res) => {
-  try {
-    const sales = await Sales.findAll();
-    res.json(sales);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error fetching sales' });
-  }
-};
 
-export const getSaleById = async (req, res) => {
+
+export const updateSaleByExecutive = async (req, res) => {
   try {
-    const id = req.params.id;
-    const sale = await Sales.findByPk(id);
+    const userId = req.user.user_id; // ID del usuario autenticado
+    const saleId = req.params.sale_id; // ID de la venta a actualizar
+
+    const {
+      service_id,
+      client_first_name,
+      client_last_name,
+      client_rut,
+      client_email,
+      client_phone,
+      client_secondary_phone,
+      region_id,
+      commune_id,
+      street,
+      number,
+      department_office_floor,
+      geo_reference,
+      promotion_id,
+      additional_comments,
+    } = req.body;
+
+    // Verifica que la venta exista
+    const sale = await Sales.findByPk(saleId);
     if (!sale) {
-      res.status(404).json({ message: 'Sale not found' });
-    } else {
-      res.json(sale);
+      return res.status(404).json({ message: 'Venta no encontrada' });
     }
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error fetching sale' });
-  }
-};
 
-export const updateSale = async (req, res) => {
-  try {
-    const id = req.params.id;
-    const sale = await Sales.findByPk(id);
-    if (!sale) {
-      res.status(404).json({ message: 'Sale not found' });
-    } else {
-      await sale.update(req.body);
-      res.json(sale);
+    // Verifica que el ejecutivo sea el correcto
+    if (sale.executive_id !== userId) {
+      return res.status(403).json({ message: 'No tienes permisos para actualizar esta venta' });
     }
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error updating sale' });
-  }
-};
 
-export const deleteSale = async (req, res) => {
-  try {
-    const id = req.params.id;
-    const sale = await Sales.findByPk(id);
-    if (!sale) {
-      res.status(404).json({ message: 'Sale not found' });
-    } else {
-      await sale.destroy();
-      res.json({ message: 'Sale deleted successfully' });
+    // Verifica la validez de la región, comuna y promoción
+    if (region_id) {
+      const region = await fetchRegionById(region_id);
+      if (!region) {
+        return res.status(400).json({ message: 'La región seleccionada no existe' });
+      }
+      
+      const commune = await Commune.findOne({ where: { commune_id, region_id } });
+      if (!commune) {
+        return res.status(400).json({ message: 'La comuna seleccionada no existe o no está asociada a la región' });
+      }
     }
+
+    if (promotion_id) {
+      const promotion = await Promotion.findByPk(promotion_id);
+      if (!promotion) {
+        return res.status(400).json({ message: 'La promoción seleccionada no existe' });
+      }
+    }
+
+    // Prepara los datos para la actualización
+    const updatedSaleData = {
+      service_id,
+      client_first_name,
+      client_last_name,
+      client_rut,
+      client_email,
+      client_phone,
+      client_secondary_phone,
+      region_id,
+      commune_id,
+      street,
+      number,
+      department_office_floor,
+      geo_reference,
+      promotion_id,
+      additional_comments,
+      sale_status_id: 1, // Asumimos que el ejecutivo puede solo actualizar a 4
+      modified_by_user_id: userId // Actualiza el campo de usuario que realizó la modificación
+    };
+
+    // Actualiza la venta
+    await sale.update(updatedSaleData);
+
+    res.status(200).json({ message: 'Venta actualizada con éxito', sale });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error deleting sale' });
+    console.error('Error details:', error);
+    res.status(500).json({ message: 'Error al actualizar la venta', error: error.message });
   }
 };
 
 export default {
   createSale,
   getSales,
-  getSaleById,
-  updateSale, 
-  deleteSale,
+  getExecutiveSales,
+  updateSale,
+  updateSaleByExecutive,
 };

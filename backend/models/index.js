@@ -7,7 +7,7 @@ import Company from './Companies.js';
 import Region from './Regions.js';
 import Commune from './Communes.js';
 import Sales from './Sales.js';
-import SaleHistory from './SaleStatusHistories.js';
+import SaleHistory from './SaleHistories.js';
 import CompanyPriority from './CompanyPriorities.js';
 import Audit from './Audit.js';
 import SaleStatus from './SaleStatuses.js';
@@ -34,6 +34,7 @@ User.belongsTo(SalesChannel, { foreignKey: 'sales_channel_id', as: 'salesChannel
 User.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
 User.belongsTo(Region, { foreignKey: 'region_id', as: 'region' });
 User.belongsTo(Commune, { foreignKey: 'commune_id', as: 'commune' });
+User.hasMany(Sales, { foreignKey: 'executive_id' });
 
 Audit.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 

@@ -48,79 +48,6 @@ function validateUser(user) {
   return user;
 }
 
-export const updateUser = async (req, res) => {
-  try {
-    const authHeader = req.header('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ message: 'No autenticado' });
-    }
-
-    const bearerToken = authHeader.split(' ')[1];
-    if (!bearerToken) {
-      return res.status(401).json({ message: 'Token inválido' });
-    }
-
-    try {
-      const decodedToken = await jwt.verify(bearerToken, process.env.SECRET_KEY);
-      req.user = decodedToken;
-
-      const userId = req.params.id;
-      const user = await User.findByPk(userId);
-      if (!user) {
-        return res.status(404).json({ message: 'Usuario no encontrado' });
-      }
-
-      const userFromDB = await User.findByPk(req.user.user_id);
-      const userRoleId = userFromDB.role_id;
-
-      if (userRoleId !== 1 && req.user.user_id !== parseInt(userId)) {
-        return res.status(403).json({ message: 'No tienes permiso para actualizar este usuario' });
-      }
-
-      const updates = req.body;
-      updates.modified_by_user_id = decodedToken.user_id;
-
-      if (updates.rut) {
-        const existingUser = await User.findOne({ where: { rut: updates.rut, user_id: { [Op.ne]: userId } } });
-        if (existingUser) {
-          return res.status(400).json({ message: 'El RUT ya está registrado' });
-        }
-      }
-
-      if (updates.email) {
-        const existingUser = await User.findOne({ where: { email: updates.email, user_id: { [Op.ne]: userId } } });
-        if (existingUser) {
-          return res.status(400).json({ message: 'El email ya está registrado' });
-        }
-      }
-
-      if (updates.commune_id) {
-        const commune = await Commune.findOne({ where: { commune_id: updates.commune_id } });
-        if (!commune) {
-          return res.status(400).json({ message: 'Comuna no encontrada' });
-        }
-        if (commune.region_id !== updates.region_id) {
-          return res.status(400).json({ message: 'La comuna no pertenece a la región especificada' });
-        }
-      }
-
-      if (updates.password) {
-        const hashedPassword = await bcrypt.hash(updates.password, 10);
-        updates.password = hashedPassword;
-      }
-
-      await user.update(updates);
-      res.json(user);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Error al actualizar el usuario' });
-    }
-  } catch (error) {
-    console.error(error);
-    res.status(401).json({ message: 'Token inválido' });
-  }
-};
-
 export const register = async (req, res) => {
   try {
     const { first_name, second_name, last_name, second_last_name, rut, email, password, phone_number, sales_channel_id, company_id, region_id, commune_id, street, number, department_office_floor, role_id } = req.body;
@@ -246,10 +173,218 @@ export const registerUserByAdmin = async (req, res) => {
   }
 };
 
+
+export const updateMyProfile = async (req, res) => {
+  try {
+    const userId = req.user.user_id; // Obtén el ID del usuario autenticado
+    const { first_name, second_name, last_name, second_last_name, email, phone_number, sales_channel_id, company_id, region_id, commune_id, street, number, department_office_floor, password, rut } = req.body;
+
+    // Busca el usuario por ID
+    const user = await User.findByPk(userId);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    // Verifica si el nuevo email ya está en uso por otro usuario
+    if (email && email !== user.email) {
+      const existingUserWithEmail = await User.findOne({ where: { email } });
+      if (existingUserWithEmail) {
+        return res.status(400).json({ message: 'El email ya está registrado' });
+      }
+    }
+
+    // Verifica si el nuevo RUT ya está en uso por otro usuario
+    if (rut && rut !== user.rut) {
+      const existingUserWithRut = await User.findOne({ where: { rut } });
+      if (existingUserWithRut) {
+        return res.status(400).json({ message: 'El RUT ya está registrado' });
+      }
+    }
+
+    // Verifica que la comuna esté asociada a la región
+    if (commune_id) {
+      const commune = await Commune.findByPk(commune_id);
+      if (!commune || commune.region_id !== region_id) {
+        return res.status(400).json({ message: 'La comuna no está asociada a la región seleccionada' });
+      }
+    }
+
+    // Si se proporciona una nueva contraseña, hashearla
+    let hashedPassword;
+    if (password) {
+      hashedPassword = await bcrypt.hash(password, 10);
+    }
+
+    // Actualiza los datos del usuario
+    await user.update({
+      first_name,
+      second_name,
+      last_name,
+      second_last_name,
+      email,
+      phone_number,
+      sales_channel_id,
+      company_id,
+      region_id,
+      commune_id,
+      street,
+      number,
+      department_office_floor,
+      password: hashedPassword ? hashedPassword : user.password, // Solo actualiza la contraseña si se proporciona una nueva
+      rut // Actualiza el RUT si se proporciona uno nuevo
+    });
+
+    res.status(200).json({ message: 'Perfil actualizado con éxito', user });
+  } catch (error) {
+    console.error('Error al actualizar el perfil:', error);
+    res.status(500).json({ message: 'Error del servidor al actualizar perfil' });
+  }
+};
+
+
+export const updateUserByAdmin = async (req, res) => {
+  try {
+    const currentUserId = req.user.user_id; // ID del usuario autenticado
+    const currentUserRoleId = req.user.role_id; // Rol del usuario autenticado
+    const targetUserId = req.params.id; // ID del usuario a actualizar
+
+    // Datos a actualizar
+    const { 
+      first_name, second_name, last_name, second_last_name, email, phone_number, sales_channel_id, company_id, region_id, commune_id, street, number, department_office_floor, password, rut 
+    } = req.body;
+
+    // Verifica si el usuario objetivo existe
+    const userToUpdate = await User.findByPk(targetUserId);
+    if (!userToUpdate) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    // Lógica para SuperAdmin
+    if (currentUserRoleId === 1) { // Asumiendo que el rol de SuperAdmin es 1
+      // Verifica si el nuevo email ya está en uso por otro usuario
+      if (email && email !== userToUpdate.email) {
+        const existingUserWithEmail = await User.findOne({ where: { email } });
+        if (existingUserWithEmail) {
+          return res.status(400).json({ message: 'El email ya está registrado' });
+        }
+      }
+
+      // Verifica si el nuevo RUT ya está en uso por otro usuario
+      if (rut && rut !== userToUpdate.rut) {
+        const existingUserWithRut = await User.findOne({ where: { rut } });
+        if (existingUserWithRut) {
+          return res.status(400).json({ message: 'El RUT ya está registrado' });
+        }
+      }
+
+      // Verifica que la comuna esté asociada a la región
+      if (commune_id) {
+        const commune = await Commune.findByPk(commune_id);
+        if (!commune || commune.region_id !== region_id) {
+          return res.status(400).json({ message: 'La comuna no está asociada a la región seleccionada' });
+        }
+      }
+
+      // Si se proporciona una nueva contraseña, hashearla
+      let hashedPassword;
+      if (password) {
+        hashedPassword = await bcrypt.hash(password, 10);
+      }
+
+      // Actualiza los datos del usuario
+      await userToUpdate.update({
+        first_name,
+        second_name,
+        last_name,
+        second_last_name,
+        email,
+        phone_number,
+        sales_channel_id,
+        company_id,
+        region_id,
+        commune_id,
+        street,
+        number,
+        department_office_floor,
+        password: hashedPassword ? hashedPassword : userToUpdate.password, // Solo actualiza la contraseña si se proporciona una nueva
+        rut // Actualiza el RUT si se proporciona uno nuevo
+      });
+
+      return res.status(200).json({ message: 'Usuario actualizado con éxito', user: userToUpdate });
+    }
+
+    // Lógica para Administrador
+    if (currentUserRoleId === 2) { // Asumiendo que el rol de Administrador es 2
+      if (userToUpdate.company_id !== req.user.company_id) {
+        return res.status(403).json({ message: 'No tienes permisos para actualizar este usuario' });
+      }
+
+      // Verifica si el nuevo email ya está en uso por otro usuario
+      if (email && email !== userToUpdate.email) {
+        const existingUserWithEmail = await User.findOne({ where: { email } });
+        if (existingUserWithEmail) {
+          return res.status(400).json({ message: 'El email ya está registrado' });
+        }
+      }
+
+      // Verifica si el nuevo RUT ya está en uso por otro usuario
+      if (rut && rut !== userToUpdate.rut) {
+        const existingUserWithRut = await User.findOne({ where: { rut } });
+        if (existingUserWithRut) {
+          return res.status(400).json({ message: 'El RUT ya está registrado' });
+        }
+      }
+
+      // Verifica que la comuna esté asociada a la región
+      if (commune_id) {
+        const commune = await Commune.findByPk(commune_id);
+        if (!commune || commune.region_id !== region_id) {
+          return res.status(400).json({ message: 'La comuna no está asociada a la región seleccionada' });
+        }
+      }
+
+      // Si se proporciona una nueva contraseña, hashearla
+      let hashedPassword;
+      if (password) {
+        hashedPassword = await bcrypt.hash(password, 10);
+      }
+
+      // Actualiza los datos del usuario
+      await userToUpdate.update({
+        first_name,
+        second_name,
+        last_name,
+        second_last_name,
+        email,
+        phone_number,
+        sales_channel_id,
+        company_id,
+        region_id,
+        commune_id,
+        street,
+        number,
+        department_office_floor,
+        password: hashedPassword ? hashedPassword : userToUpdate.password, // Solo actualiza la contraseña si se proporciona una nueva
+        rut // Actualiza el RUT si se proporciona uno nuevo
+      });
+
+      return res.status(200).json({ message: 'Usuario actualizado con éxito', user: userToUpdate });
+    }
+
+    // Si el usuario no es SuperAdmin ni Administrador
+    res.status(403).json({ message: 'No tienes permisos para actualizar usuarios' });
+  } catch (error) {
+    console.error('Error al actualizar el usuario:', error);
+    res.status(500).json({ message: 'Error del servidor al actualizar usuario' });
+  }
+};
+
 export default {
   getAllUsers,
   register,
-  updateUser,
+  updateMyProfile,
+  updateUserByAdmin,
   getMe,
   registerUserByAdmin,
 };
