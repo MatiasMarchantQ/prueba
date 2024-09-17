@@ -214,7 +214,7 @@ export const createSale = async (req, res) => {
     
       // Envía el correo
       await transporter.sendMail({
-        from: 'tu-email@gmail.com',
+        from: 'noreply.ingbell@gmail.com',
         to: 'internetsolicitudes@gmail.com',
         subject: subject,
         html: message
@@ -230,15 +230,106 @@ export const createSale = async (req, res) => {
   }
 };
 
-export const getSales = async (req, res) => {
+export const getPromotionsByCommune = async (req, res) => {
   try {
-    const sales = await Sales.findAll();
-    res.json(sales);
+    const communeId = req.params.commune_id;
+    const promotions = await PromotionCommune.findAll({
+      where: { commune_id: communeId },
+      attributes: ['promotion_id'],
+      include: [
+        {
+          model: Promotion,
+          attributes: ['promotion_id', 'promotion'],
+        },
+      ],
+    });
+    res.json(promotions);
+  } catch (error) {
+    console.error('Error details:', error);
+    res.status(500).json({ message: 'Error obteniendo promociones', error: error.message });
+  }
+};
+
+export const getInstallationAmountsByPromotion = async (req, res) => {
+  try {
+    const promotionId = req.params.promotion_id;
+    const promotion = await Promotion.findByPk(promotionId);
+    if (!promotion) {
+      return res.status(404).json({ message: 'Promoción no encontrada' });
+    }
+    const installationAmountId = promotion.installation_amount_id;
+    const installationAmount = await InstallationAmount.findByPk(installationAmountId);
+    if (!installationAmount) {
+      return res.status(404).json({ message: 'Monto de instalación no encontrado' });
+    }
+    res.json({ installation_amount_id: installationAmount.installation_amount_id ,amount: installationAmount.amount });
+  } catch (error) {
+    console.error('Error details:', error);
+    res.status(500).json({ message: 'Error obteniendo monto de instalación', error: error.message });
+  }
+};
+
+export const getSales = async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 18;
+  const offset = (page - 1) * limit;
+
+  // Suponiendo que el company_id y user_id del usuario autenticado están disponibles en req.user
+  const user = req.user; // Obtén el usuario desde la sesión o el middleware de autenticación
+  const companyId = user.company_id; // Asegúrate de que company_id esté disponible en el objeto usuario
+  const roleId = user.role_id; // Obtén el role_id del usuario
+  const userId = user.user_id; // Obtén el user_id del usuario autenticado
+
+  try {
+    let options = {
+      limit,
+      offset,
+    };
+
+    if (roleId === 2) {
+      // Rol 2: Filtra por company_id
+      options.where = {
+        company_id: companyId,
+      };
+    } else if (roleId === 3) {
+      // Rol 3: Filtra solo por executive_id del usuario autenticado
+      options.where = {
+        executive_id: userId,
+        company_id: companyId,
+      };
+    }
+
+    // Obtener los datos de ventas con paginación y posible filtrado
+    const sales = await Sales.findAll(options);
+
+    // Contar el número total de ventas con el filtro aplicado
+    const totalSalesCountOptions = { where: {} };
+    
+    if (roleId === 2) {
+      totalSalesCountOptions.where.company_id = companyId;
+    } else if (roleId === 3) {
+      totalSalesCountOptions.where.executive_id = userId;
+      totalSalesCountOptions.where.company_id = companyId;
+    }
+
+    const totalSales = await Sales.count(totalSalesCountOptions);
+
+    // Calcular el número total de páginas
+    const totalPages = Math.ceil(totalSales / limit);
+
+    res.json({
+      sales,
+      totalPages,
+      currentPage: page,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error fetching sales' });
   }
 };
+
+
+
 
 export const getExecutiveSales = async (req, res) => {
   try {
@@ -533,6 +624,8 @@ export const updateSaleByExecutive = async (req, res) => {
 
 export default {
   createSale,
+  getPromotionsByCommune,
+  getInstallationAmountsByPromotion,
   getSales,
   getExecutiveSales,
   updateSale,

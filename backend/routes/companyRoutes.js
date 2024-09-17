@@ -4,6 +4,6 @@ import { getCompanies } from '../controllers/companyController.js';
 
 const router = express.Router();
 
-router.get('/companies', getCompanies);
+router.get('/', getCompanies);
 
 export default router;

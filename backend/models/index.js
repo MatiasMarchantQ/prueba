@@ -65,8 +65,13 @@ Commune.belongsTo(Region, { foreignKey: 'region_id', as: 'region' });
 Commune.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifier' });
 
 Promotion.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifier' });
-Promotion.belongsTo(InstallationAmount, { foreignKey: 'installation_amount_id', as: 'installationAmount' });
-
+InstallationAmount.belongsTo(Promotion, {
+  foreignKey: 'installation_amount_id',
+  onDelete: 'CASCADE',
+});
+Promotion.hasMany(InstallationAmount, {
+  foreignKey: 'installation_amount_id',
+});
 InstallationAmount.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifier' });
 
 CompanyPriority.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });

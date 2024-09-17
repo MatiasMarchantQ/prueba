@@ -4,6 +4,6 @@ import { getRegions } from '../controllers/regionController.js';
 
 const router = express.Router();
 
-router.get('/regions', getRegions);
+router.get('/', getRegions);
 
 export default router;
