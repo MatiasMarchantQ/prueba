@@ -200,7 +200,37 @@ const Sales = sequelize.define('Sales', {
     }
   },
   tableName: 'sales',
-  timestamps: false 
+  timestamps: false,
+  indexes: [
+    {
+      name: 'idx_service_id',
+      fields: ['service_id'],
+    },
+    {
+      name: 'idx_client_rut',
+      fields: ['client_rut'],
+    },
+    {
+      name: 'idx_client_first_name',
+      fields: ['client_first_name'],
+    },
+    {
+      name: 'idx_client_last_name',
+      fields: ['client_last_name'],
+    },
+    {
+      name: 'idx_client_phone',
+      fields: ['client_phone'],
+    },
+    {
+      name: 'idx_client_email',
+      fields: ['client_email'],
+    },
+    {
+      name: 'idx_street',
+      fields: ['street'],
+    },
+  ],
 });
 
 export default Sales;

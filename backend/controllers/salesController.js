@@ -53,7 +53,7 @@ export const createSale = async (req, res) => {
       .filter(file => file && file.path)
       .map(file => {
         const ext = path.extname(file.originalname);
-        const newFileName = `${client_rut}${ext}`;
+        const newFileName = `${client_rut}_${Date.now()}${ext}`;
         const newFilePath = path.join(path.dirname(file.path), newFileName);
 
         fs.renameSync(file.path, newFilePath);
@@ -328,8 +328,48 @@ export const getSales = async (req, res) => {
   }
 };
 
+export const getSaleById = async (req, res) => {
+  try {
+    const saleId = req.params.sale_id;
+    const sale = await Sales.findByPk(saleId);
+    if (!sale) {
+      return res.status(404).json({ message: 'Venta no encontrada' });
+    }
+    res.json(sale);
+  } catch (error) {
+    console.error('Error details:', error);
+    res.status(500).json({ message: 'Error obteniendo venta', error: error.message });
+  }
+};
 
+export const getSalesBySearch = async (req, res) => {
+  const searchTerm = req.query.search;
 
+  try {
+    const sales = await Sales.findAll({
+      where: {
+        [Op.or]: [
+          { client_first_name: { [Op.like]: `%${searchTerm}%` } },
+          { client_last_name: { [Op.like]: `%${searchTerm}%` } },
+          { client_rut: { [Op.like]: `%${searchTerm}%` } },
+          { client_email: { [Op.like]: `%${searchTerm}%` } },
+          { street: { [Op.like]: `%${searchTerm}%` } },
+          { service_id: { [Op.like]: `%${searchTerm}%` } },
+          { client_phone: { [Op.like]: `%${searchTerm}%` } },
+        ],
+      },
+    });
+
+    if (sales.length === 0) {
+      return res.status(404).json({ message: 'No se encontró ninguna venta que coincida con la búsqueda' });
+    }
+
+    res.json(sales);
+  } catch (error) {
+    console.error('Error al obtener ventas por búsqueda:', error);
+    res.status(500).json({ message: 'Error al obtener ventas por búsqueda' });
+  }
+};
 
 export const getExecutiveSales = async (req, res) => {
   try {
