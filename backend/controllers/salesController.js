@@ -2,10 +2,12 @@ import Sales from '../models/Sales.js';
 import Region from '../models/Regions.js';
 import Commune from '../models/Communes.js';
 import User from '../models/Users.js';
+import Role from '../models/Roles.js';
 import SalesChannel from '../models/SalesChannels.js';
 import InstallationAmount from '../models/InstallationAmounts.js';
 import Promotion from '../models/Promotions.js';
 import PromotionCommune from '../models/PromotionsCommunes.js';
+import Company from '../models/Companies.js';
 import CompanyPriority from '../models/CompanyPriorities.js';
 import path from 'path';
 import fs from 'fs';
@@ -274,37 +276,84 @@ export const getSales = async (req, res) => {
   const limit = parseInt(req.query.limit) || 18;
   const offset = (page - 1) * limit;
 
-  // Suponiendo que el company_id y user_id del usuario autenticado están disponibles en req.user
-  const user = req.user; // Obtén el usuario desde la sesión o el middleware de autenticación
-  const companyId = user.company_id; // Asegúrate de que company_id esté disponible en el objeto usuario
-  const roleId = user.role_id; // Obtén el role_id del usuario
-  const userId = user.user_id; // Obtén el user_id del usuario autenticado
+  const user = req.user;
+  const companyId = user.company_id;
+  const roleId = user.role_id;
+  const userId = user.user_id;
 
   try {
     let options = {
       limit,
       offset,
+      include: [
+        {
+          model: SalesChannel,
+          as: 'salesChannel',
+          attributes: ['channel_name'],
+        },
+        {
+          model: Region,
+          as: 'region',
+          attributes: ['region_name'],
+        },
+        {
+          model: Commune,
+          as: 'commune',
+          attributes: ['commune_name'],
+        },
+        {
+          model: Promotion,
+          as: 'promotion',
+          attributes: ['promotion'],
+        },
+        {
+          model: InstallationAmount,
+          as: 'installationAmount',
+          attributes: ['amount'],
+        },
+        {
+          model: Company,
+          as: 'company',
+          attributes: ['company_name'],
+        },
+        {
+          model: User,
+          as: 'executive',
+          attributes: [
+            'first_name',
+            'second_name',
+            'last_name',
+            'second_last_name',
+            'rut',
+            'email',
+            'phone_number',
+          ],
+          include: [
+            {
+              model: Role,
+              as: 'role',
+              attributes: ['role_name'],
+            },
+          ],
+        },
+      ],
     };
 
     if (roleId === 2) {
-      // Rol 2: Filtra por company_id
       options.where = {
         company_id: companyId,
       };
     } else if (roleId === 3) {
-      // Rol 3: Filtra solo por executive_id del usuario autenticado
       options.where = {
         executive_id: userId,
         company_id: companyId,
       };
     }
 
-    // Obtener los datos de ventas con paginación y posible filtrado
     const sales = await Sales.findAll(options);
 
-    // Contar el número total de ventas con el filtro aplicado
     const totalSalesCountOptions = { where: {} };
-    
+
     if (roleId === 2) {
       totalSalesCountOptions.where.company_id = companyId;
     } else if (roleId === 3) {
@@ -314,7 +363,6 @@ export const getSales = async (req, res) => {
 
     const totalSales = await Sales.count(totalSalesCountOptions);
 
-    // Calcular el número total de páginas
     const totalPages = Math.ceil(totalSales / limit);
 
     res.json({
