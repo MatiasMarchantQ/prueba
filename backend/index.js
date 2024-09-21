@@ -8,6 +8,7 @@ import regionRoutes from './routes/regionRoutes.js';
 import communeRoutes from './routes/communeRoutes.js';
 import roleRoutes from './routes/roleRoutes.js';
 import saleschannelRoutes from './routes/saleschannelRoutes.js';
+import saleStatusRoutes from './routes/saleStatusRoutes.js';
 import sequelize from './config/db.js';
 
 const app = express();
@@ -18,12 +19,13 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/sales', salesRoutes); // Aquí se monta el router para ventas
-app.use('/api/companies', companyRoutes); // Ajusté el prefijo a /api/companies
-app.use('/api/regions', regionRoutes); // Ajusté el prefijo a /api/regions
-app.use('/api/communes', communeRoutes); // Ajusté el prefijo a /api/communes
-app.use('/api/roles', roleRoutes); // Ajusté el prefijo a /api/roles
+app.use('/api/sales', salesRoutes);
+app.use('/api/companies', companyRoutes);
+app.use('/api/regions', regionRoutes);
+app.use('/api/communes', communeRoutes);
+app.use('/api/roles', roleRoutes);
 app.use('/api/channels', saleschannelRoutes);
+app.use('/api/sale-statuses', saleStatusRoutes); // Agregar ruta
 
 app.use('/uploads', express.static('uploads'));
 

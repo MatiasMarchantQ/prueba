@@ -9,12 +9,73 @@ import Promotion from '../models/Promotions.js';
 import PromotionCommune from '../models/PromotionsCommunes.js';
 import Company from '../models/Companies.js';
 import CompanyPriority from '../models/CompanyPriorities.js';
+import SaleStatus from '../models/SaleStatuses.js';
 import path from 'path';
 import fs from 'fs';
 import { fetchRegionById } from '../services/dataServices.js';
 import { Op } from 'sequelize';
 import { Sequelize, DataTypes } from 'sequelize';
-import nodemailer from 'nodemailer';
+import { sendEmailNotification } from '../services/emailService.js';
+
+const handleFileRenaming = (files, clientRut) => {
+  return files
+    .filter(file => file && file.path)
+    .map(file => {
+      const ext = path.extname(file.originalname);
+      const newFileName = `${clientRut}_${Date.now()}${ext}`;
+      const newFilePath = path.join(path.dirname(file.path), newFileName);
+      fs.renameSync(file.path, newFilePath);
+      return newFilePath;
+    });
+};
+
+const validateInputs = async (reqBody) => {
+  const { region_id, commune_id, promotion_id } = reqBody;
+
+  const region = await fetchRegionById(region_id);
+  if (!region) throw new Error('La región seleccionada no existe');
+
+  const commune = await Commune.findOne({ where: { commune_id, region_id } });
+  if (!commune) throw new Error('La comuna seleccionada no existe o no está asociada a la región');
+
+  const promotion = await Promotion.findByPk(promotion_id);
+  if (!promotion) throw new Error('La promoción seleccionada no existe');
+
+  return promotion;
+};
+
+const createSaleData = (reqBody, idCardImages, currentUser, installationAmountId, companyPriorityId) => {
+  const { service_id, entry_date, client_first_name, client_last_name, client_rut, client_email, client_phone, client_secondary_phone, region_id, commune_id, street, number, department_office_floor, geo_reference, promotion_id, additional_comments } = reqBody;
+
+  return {
+    service_id: service_id || null,
+    entry_date,
+    sales_channel_id: 1,
+    client_first_name,
+    client_last_name,
+    client_rut,
+    client_email,
+    client_phone,
+    client_secondary_phone: client_secondary_phone || null,
+    region_id,
+    commune_id,
+    street: street || null,
+    number: number || null,
+    department_office_floor: department_office_floor || null,
+    geo_reference,
+    promotion_id,
+    installation_amount_id: installationAmountId,
+    additional_comments: additional_comments || null,
+    id_card_image: JSON.stringify(idCardImages) || null,
+    sale_status_id: 1,
+    executive_id: currentUser.role_id === 3 ? currentUser.user_id : null,
+    validator_id: null,
+    dispatcher_id: null,
+    company_id: currentUser.company_id,
+    company_priority_id: companyPriorityId,
+    modified_by_user_id: currentUser.user_id
+  };
+};
 
 export const createSale = async (req, res) => {
   try {
@@ -23,208 +84,32 @@ export const createSale = async (req, res) => {
       return acc;
     }, {});
 
-    const {
-      service_id,
-      entry_date,
-      client_first_name,
-      client_last_name,
-      client_rut,
-      client_email,
-      client_phone,
-      client_secondary_phone,
-      region_id,
-      commune_id,
-      street,
-      number,
-      department_office_floor,
-      geo_reference,
-      promotion_id,
-      additional_comments,
-      id_card_image,
-      validator_id,
-      dispatcher_id,
-    } = reqBody;
-
     const files = req.files;
+    if (!files || files.length === 0) return res.status(400).json({ message: 'No files provided' });
 
-    if (!files || files.length === 0) {
-      return res.status(400).json({ message: 'No files provided' });
-    }
+    const idCardImages = handleFileRenaming(files, reqBody.client_rut);
+    if (idCardImages.length === 0) return res.status(400).json({ message: 'No valid id card images provided' });
 
-    const idCardImages = files
-      .filter(file => file && file.path)
-      .map(file => {
-        const ext = path.extname(file.originalname);
-        const newFileName = `${client_rut}_${Date.now()}${ext}`;
-        const newFilePath = path.join(path.dirname(file.path), newFileName);
-
-        fs.renameSync(file.path, newFilePath);
-
-        return newFilePath;
-      });
-
-    if (idCardImages.length === 0) {
-      return res.status(400).json({ message: 'No valid id card images provided' });
-    }
-
-    const region = await fetchRegionById(region_id);
-    if (!region) {
-      return res.status(400).json({ message: 'La región seleccionada no existe' });
-    }
-
-    const commune = await Commune.findOne({
-      where: {
-        commune_id: commune_id,
-        region_id: region_id
-      }
-    });
-    if (!commune) {
-      return res.status(400).json({ message: 'La comuna seleccionada no existe o no está asociada a la región' });
-    }
-
-    const promotion = await Promotion.findByPk(promotion_id);
-    if (!promotion) {
-      return res.status(400).json({ message: 'La promoción seleccionada no existe' });
-    }
-
-    const installationAmountId = promotion.installation_amount_id;
-
+    const promotion = await validateInputs(reqBody);
     const currentUser = await User.findByPk(req.user.user_id);
-    if (!currentUser) {
-      return res.status(400).json({ message: 'Usuario no encontrado' });
-    }
+    if (!currentUser) return res.status(400).json({ message: 'Usuario no encontrado' });
 
-    if (!req.user || !req.user.user_id) {
-      return res.status(401).json({ message: 'Unauthorized' });
-    }
+    const companyPriority = await CompanyPriority.findOne({ where: { company_id: currentUser.company_id }, order: [['priority_level', 'ASC']] });
+    if (!companyPriority) return res.status(400).json({ message: 'No se encontró la prioridad de la compañía' });
 
-    const companyId = currentUser.company_id;
+    const existingRut = await Sales.findOne({ where: { client_rut: reqBody.client_rut } });
+    if (existingRut) return res.status(400).json({ message: 'El RUT ya existe en la base de datos' });
 
-    const Priority = await CompanyPriority.findOne({
-      where: {
-        company_id: companyId,
-      },
-      order: [['priority_level', 'ASC']],
-    });
+    const existingEmail = await Sales.findOne({ where: { client_email: reqBody.client_email } });
+    if (existingEmail) return res.status(400).json({ message: 'El email ya existe en la base de datos' });
 
-    if (!Priority) {
-      return res.status(400).json({ message: 'No se encontró la prioridad de la compañía' });
-    }
-
-    const companyPriorityId = Priority.priority_level;
-
-    let executiveId = null;
-    if (currentUser.role_id === 3) {
-      executiveId = currentUser.user_id;
-    }
-
-    const existingRut = await Sales.findOne({ where: { client_rut } });
-    if (existingRut) {
-      return res.status(400).json({ message: 'El RUT ya existe en la base de datos' });
-    }
-
-    const existingEmail = await Sales.findOne({ where: { client_email } });
-    if (existingEmail) {
-      return res.status(400).json({ message: 'El email ya existe en la base de datos' });
-    }
-
-    const saleData = {
-      service_id: service_id || null,
-      entry_date,
-      sales_channel_id: 1,
-      client_first_name,
-      client_last_name,
-      client_rut,
-      client_email,
-      client_phone,
-      client_secondary_phone: client_secondary_phone || null,
-      region_id,
-      commune_id,
-      street: street || null,
-      number: number || null,
-      department_office_floor: department_office_floor || null,
-      geo_reference,
-      promotion_id,
-      installation_amount_id: installationAmountId,
-      additional_comments: additional_comments || null,
-      id_card_image: JSON.stringify(idCardImages) || null,
-      sale_status_id: 1,
-      executive_id: executiveId,
-      validator_id: null,
-      dispatcher_id: null,
-      company_id: companyId,
-      company_priority_id: companyPriorityId,
-      id_card_image: idCardImages,
-      modified_by_user_id: req.user.user_id
-    };
-
+    const saleData = createSaleData(reqBody, idCardImages, currentUser, promotion.installation_amount_id, companyPriority.priority_level);
     const sale = await Sales.create(saleData);
 
     if (saleData.sale_status_id === 1) {
-      // Configura el transporte de correo
-      const transporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 587,
-        secure: false,
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASSWORD
-        }
-      });
-      
-      const salesChannel = await SalesChannel.findOne({
-          where: { sales_channel_id: saleData.sales_channel_id } // Usa el ID del canal desde saleData
-      });
-    
-      // Define los valores necesarios
-      const commune = await Commune.findOne({
-        where: { commune_id: sale.commune_id } // Asegúrate de que saleData contiene commune_id
-      });
-      const communeName = commune ? commune.commune_name : 'Comuna no disponible';
-      // O consulta a la base de datos si es necesario
-      const promotion = await Promotion.findOne({
-        where: { promotion_id: sale.promotion_id }
-      });      
-      const installationAmount = await InstallationAmount.findOne({
-        where: { installation_amount_id: promotion.installation_amount_id }
-      });
-      const executiveName = currentUser ? `${currentUser.first_name} ${currentUser.last_name}` : 'Ejecutivo no asignado';
-      const subject = `${client_last_name}, ${client_first_name} - ${executiveName} - ${communeName} - ${salesChannel ? salesChannel.channel_name : 'Canal no disponible'}`;
-      const formattedDate = new Date(entry_date).toLocaleDateString('es-CL'); // Formato dd-mm-aaaa
-    
-      const message = `
-        <p>Estimado/a,</p>
-        <p>Se ha registrado una nueva venta en el sistema.</p>
-        <p><strong>Detalles de la Venta:</strong></p>
-        <ul>
-          <li><strong>Fecha:</strong> ${formattedDate}</li>
-          <li><strong>Nombre del Cliente:</strong> ${client_first_name} ${client_last_name}</li>
-          <li><strong>RUT del Cliente:</strong> ${client_rut}</li>
-          <li><strong>Teléfono del Cliente:</strong> ${client_phone}</li>
-          <li><strong>Email del Cliente:</strong> ${client_email}</li>
-          <li><strong>Dirección:</strong> ${street ? `${street} ${number}` : 'No proporcionada'}</li>
-          <li><strong>Comuna:</strong> ${communeName}</li>
-          <li><strong>Monto de instalación:</strong> ${installationAmount ? installationAmount.amount : 'No disponible'}</li>
-          <li><strong>Promoción:</strong> ${promotion ? promotion.promotion : 'Promoción no disponible'}</li>
-          <li><strong>Referencia Geográfica:</strong> ${geo_reference}</li>
-          <li><strong>Nombre del Ejecutivo:</strong> ${executiveName}</li>
-        </ul>
-        <p>Por favor, revise el Canal Ventas ISP.</p>
-        <p>Saludos cordiales,</p>
-        <p>El equipo de ventas</p>
-      `;
-    
-      // Envía el correo
-      await transporter.sendMail({
-        from: 'noreply.ingbell@gmail.com',
-        to: 'internetsolicitudes@gmail.com',
-        subject: subject,
-        html: message
-      });
+      await sendEmailNotification(sale, currentUser, reqBody); // Llamada al servicio de correo
     }
     
-
-
     res.status(201).json(sale);
   } catch (error) {
     console.error('Error details:', error);
@@ -232,59 +117,154 @@ export const createSale = async (req, res) => {
   }
 };
 
-export const getPromotionsByCommune = async (req, res) => {
-  try {
-    const communeId = req.params.commune_id;
-    const promotions = await PromotionCommune.findAll({
-      where: { commune_id: communeId },
-      attributes: ['promotion_id'],
-      include: [
-        {
-          model: Promotion,
-          attributes: ['promotion_id', 'promotion'],
-        },
-      ],
-    });
-    res.json(promotions);
-  } catch (error) {
-    console.error('Error details:', error);
-    res.status(500).json({ message: 'Error obteniendo promociones', error: error.message });
-  }
-};
-
-export const getInstallationAmountsByPromotion = async (req, res) => {
-  try {
-    const promotionId = req.params.promotion_id;
-    const promotion = await Promotion.findByPk(promotionId);
-    if (!promotion) {
-      return res.status(404).json({ message: 'Promoción no encontrada' });
-    }
-    const installationAmountId = promotion.installation_amount_id;
-    const installationAmount = await InstallationAmount.findByPk(installationAmountId);
-    if (!installationAmount) {
-      return res.status(404).json({ message: 'Monto de instalación no encontrado' });
-    }
-    res.json({ installation_amount_id: installationAmount.installation_amount_id ,amount: installationAmount.amount });
-  } catch (error) {
-    console.error('Error details:', error);
-    res.status(500).json({ message: 'Error obteniendo monto de instalación', error: error.message });
-  }
-};
 
 export const getSales = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 18;
   const offset = (page - 1) * limit;
 
-  const user = req.user;
-  const companyId = user.company_id;
-  const roleId = user.role_id;
-  const userId = user.user_id;
+  const { company_id: companyId, role_id: roleId, user_id: userId } = req.user;
 
   try {
-    let options = {
+    const where = buildWhereConditions(roleId, companyId, userId);
+    const order = await buildOrderConditions(companyId);
+    
+    const sales = await Sales.findAll({
       limit,
       offset,
+      where,
+      include: getSalesIncludes(),
+      order: [...order, ['created_at', 'DESC']],
+    });
+
+    const totalSales = await getTotalSalesCount(where, roleId, companyId, userId);
+    const totalPages = Math.ceil(totalSales / limit);
+
+    res.json({ sales, totalPages, currentPage: page });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error fetching sales' });
+  }
+};
+
+const buildWhereConditions = (roleId, companyId, userId) => {
+  const where = {};
+
+  if (roleId === 2) {
+    where.company_id = companyId;
+  } else if (roleId === 3) {
+    where.executive_id = userId;
+  }
+
+  // Sale status filters based on role
+  if (roleId === 3) {
+    where.sale_status_id = [1, 4];
+  } else if (roleId === 4) {
+    where.sale_status_id = [1, 3];
+  } else if (roleId === 5) {
+    where.sale_status_id = [2, 5, 6];
+  }
+
+  return where;
+};
+
+const buildOrderConditions = async (companyId) => {
+  const companyPriorities = await CompanyPriority.findAll({
+    where: { company_id: companyId },
+    attributes: ['priority_level'],
+  });
+
+  const priorityLevels = companyPriorities.map(priority => priority.priority_level);
+  const order = [];
+
+  if (priorityLevels.length > 0) {
+    order.push(Sequelize.literal(`FIELD(company_priority_id, ${priorityLevels.join(',')})`));
+  }
+
+  return order;
+};
+
+const getSalesIncludes = () => [
+  {
+    model: SalesChannel,
+    as: 'salesChannel',
+    attributes: ['channel_name'],
+  },
+  {
+    model: Region,
+    as: 'region',
+    attributes: ['region_name'],
+  },
+  {
+    model: Commune,
+    as: 'commune',
+    attributes: ['commune_name'],
+  },
+  {
+    model: Promotion,
+    as: 'promotion',
+    attributes: ['promotion'],
+  },
+  {
+    model: InstallationAmount,
+    as: 'installationAmount',
+    attributes: ['amount'],
+  },
+  {
+    model: Company,
+    as: 'company',
+    attributes: ['company_name'],
+  },
+  {
+    model: SaleStatus,
+    as: 'saleStatus',
+    attributes: ['status_name'],
+  },
+  {
+    model: User,
+    as: 'executive',
+    attributes: [
+      'first_name',
+      'second_name',
+      'last_name',
+      'second_last_name',
+      'rut',
+      'email',
+      'phone_number',
+    ],
+    include: [{
+      model: Role,
+      as: 'role',
+      attributes: ['role_name'],
+    }],
+  },
+];
+
+const getTotalSalesCount = async (where, roleId, companyId, userId) => {
+  const totalSalesCountOptions = { where: {} };
+
+  if (roleId === 2) {
+    totalSalesCountOptions.where.company_id = companyId;
+  } else if (roleId === 3) {
+    totalSalesCountOptions.where.executive_id = userId;
+  }
+
+  if (roleId === 3) {
+    totalSalesCountOptions.where.sale_status_id = [1, 4];
+  } else if (roleId === 4) {
+    totalSalesCountOptions.where.sale_status_id = [1, 3];
+  } else if (roleId === 5) {
+    totalSalesCountOptions.where.sale_status_id = [2, 5, 6];
+  }
+
+  return await Sales.count(totalSalesCountOptions);
+};
+
+export const getSaleById = async (req, res) => {
+  try {
+    const saleId = req.params.sale_id;
+    let options = {
+      where: { sale_id: saleId },
       include: [
         {
           model: SalesChannel,
@@ -317,6 +297,11 @@ export const getSales = async (req, res) => {
           attributes: ['company_name'],
         },
         {
+          model: SaleStatus,
+          as: 'saleStatus',
+          attributes: ['status_name'],
+        },
+        {
           model: User,
           as: 'executive',
           attributes: [
@@ -339,50 +324,34 @@ export const getSales = async (req, res) => {
       ],
     };
 
-    if (roleId === 2) {
-      options.where = {
-        company_id: companyId,
-      };
-    } else if (roleId === 3) {
-      options.where = {
-        executive_id: userId,
-        company_id: companyId,
-      };
-    }
-
-    const sales = await Sales.findAll(options);
-
-    const totalSalesCountOptions = { where: {} };
-
-    if (roleId === 2) {
-      totalSalesCountOptions.where.company_id = companyId;
-    } else if (roleId === 3) {
-      totalSalesCountOptions.where.executive_id = userId;
-      totalSalesCountOptions.where.company_id = companyId;
-    }
-
-    const totalSales = await Sales.count(totalSalesCountOptions);
-
-    const totalPages = Math.ceil(totalSales / limit);
-
-    res.json({
-      sales,
-      totalPages,
-      currentPage: page,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error fetching sales' });
-  }
-};
-
-export const getSaleById = async (req, res) => {
-  try {
-    const saleId = req.params.sale_id;
-    const sale = await Sales.findByPk(saleId);
+    const sale = await Sales.findOne(options);
     if (!sale) {
       return res.status(404).json({ message: 'Venta no encontrada' });
     }
+
+    if (sale.id_card_image) {
+      const cleanedIdCardImage = sale.id_card_image.replace(/\\/g, '/'); // Reemplazar barras invertidas por barras normales
+      
+      try {
+        const idCardImagesArray = JSON.parse(cleanedIdCardImage); // Convertir el string JSON en un array
+    
+        // Verificar que idCardImagesArray es un arreglo
+        if (Array.isArray(idCardImagesArray)) {
+          // Generar enlaces clicables para las imágenes
+          sale.id_card_image_links = idCardImagesArray.map(image => ({
+            url: `${req.protocol}://${req.get('host')}${image}`, // Generar URL completa
+            label: image.split('/').pop(), // Obtener el nombre del archivo
+          }));
+        } else {
+          console.error('idCardImagesArray no es un arreglo:', idCardImagesArray);
+          sale.id_card_image_links = []; // Manejo de error: asignar un arreglo vacío
+        }
+      } catch (jsonError) {
+        console.error('Error al analizar id_card_image:', jsonError);
+        sale.id_card_image_links = []; // Manejo de error: asignar un arreglo vacío
+      }
+    }
+
     res.json(sale);
   } catch (error) {
     console.error('Error details:', error);
@@ -390,23 +359,75 @@ export const getSaleById = async (req, res) => {
   }
 };
 
-export const getSalesBySearch = async (req, res) => {
-  const searchTerm = req.query.search;
+
+
+export const getPromotionsByCommune = async (req, res) => {
+  const communeId = req.params.commune_id;
 
   try {
-    const sales = await Sales.findAll({
-      where: {
-        [Op.or]: [
-          { client_first_name: { [Op.like]: `%${searchTerm}%` } },
-          { client_last_name: { [Op.like]: `%${searchTerm}%` } },
-          { client_rut: { [Op.like]: `%${searchTerm}%` } },
-          { client_email: { [Op.like]: `%${searchTerm}%` } },
-          { street: { [Op.like]: `%${searchTerm}%` } },
-          { service_id: { [Op.like]: `%${searchTerm}%` } },
-          { client_phone: { [Op.like]: `%${searchTerm}%` } },
-        ],
+    const promotions = await fetchPromotionsByCommune(communeId);
+    res.json(promotions);
+  } catch (error) {
+    handleError(res, 'Error obteniendo promociones', error);
+  }
+};
+
+const fetchPromotionsByCommune = async (communeId) => {
+  return await PromotionCommune.findAll({
+    where: { commune_id: communeId },
+    attributes: ['promotion_id'],
+    include: [
+      {
+        model: Promotion,
+        attributes: ['promotion_id', 'promotion'],
       },
-    });
+    ],
+  });
+};
+
+export const getInstallationAmountsByPromotion = async (req, res) => {
+  const promotionId = req.params.promotion_id;
+
+  try {
+    const installationAmount = await fetchInstallationAmountByPromotion(promotionId);
+    res.json(installationAmount);
+  } catch (error) {
+    handleError(res, 'Error obteniendo monto de instalación', error);
+  }
+};
+
+const fetchInstallationAmountByPromotion = async (promotionId) => {
+  const promotion = await Promotion.findByPk(promotionId);
+  if (!promotion) {
+    throw new Error('Promoción no encontrada');
+  }
+
+  const installationAmount = await InstallationAmount.findByPk(promotion.installation_amount_id);
+  if (!installationAmount) {
+    throw new Error('Monto de instalación no encontrado');
+  }
+
+  return { installation_amount_id: installationAmount.installation_amount_id, amount: installationAmount.amount };
+};
+
+const handleError = (res, message, error) => {
+  console.error('Error details:', error);
+  res.status(500).json({ message, error: error.message });
+};
+
+export const getSalesBySearch = async (req, res) => {
+  const searchTerm = req.query.search;
+  const userId = req.user.user_id;
+  const userRoleId = req.user.role_id;
+
+  if (!searchTerm) {
+    return res.status(400).json({ message: 'El término de búsqueda no puede estar vacío' });
+  }
+
+  try {
+    const whereClause = buildWhereClause(searchTerm, userId, userRoleId);
+
+    const sales = await Sales.findAll({ where: whereClause });
 
     if (sales.length === 0) {
       return res.status(404).json({ message: 'No se encontró ninguna venta que coincida con la búsqueda' });
@@ -415,9 +436,48 @@ export const getSalesBySearch = async (req, res) => {
     res.json(sales);
   } catch (error) {
     console.error('Error al obtener ventas por búsqueda:', error);
-    res.status(500).json({ message: 'Error al obtener ventas por búsqueda' });
+    return res.status(500).json({ message: 'Error al obtener ventas por búsqueda', error: error.message });
   }
 };
+
+const buildWhereClause = (searchTerm, userId, userRoleId) => {
+  const conditions = {
+    [Op.and]: [],
+    [Op.or]: [
+      { client_first_name: { [Op.like]: `%${searchTerm}%` } },
+      { client_last_name: { [Op.like]: `%${searchTerm}%` } },
+      { client_rut: { [Op.like]: `%${searchTerm}%` } },
+      { client_email: { [Op.like]: `%${searchTerm}%` } },
+      { client_phone: { [Op.like]: `%${searchTerm}%` } },
+      { street: { [Op.like]: `%${searchTerm}%` } },
+      { service_id: { [Op.like]: `%${searchTerm}%` } },
+    ],
+  };
+
+  // Condiciones según el role_id
+  if (userRoleId === 1 || userRoleId === 4) {
+    // roles 1 y 4 pueden buscar libremente
+    return conditions;
+  } else if (userRoleId === 2) {
+    // rol 2: buscar por company_id asociado
+    conditions[Op.and].push({ company_id: req.user.company_id });
+  } else if (userRoleId === 3) {
+    // rol 3: buscar solo por executive_id y sale_status_id 1 o 4
+    conditions[Op.and].push({ executive_id: userId });
+    conditions[Op.and].push({ 
+      [Op.or]: [{ sale_status_id: 1 }, { sale_status_id: 4 }] 
+    });
+  } else if (userRoleId === 4) {
+    // rol 4: buscar solo por sale_status_id 2, 5 o 6
+    conditions[Op.and].push({ 
+      [Op.or]: [{ sale_status_id: 2 }, { sale_status_id: 5 }, { sale_status_id: 6 }] 
+    });
+  }
+
+  return conditions;
+};
+
+
 
 export const getExecutiveSales = async (req, res) => {
   try {
@@ -486,13 +546,11 @@ export const getExecutiveSales = async (req, res) => {
     res.status(500).json({ message: 'Error fetching executive sales', error: error.message });
   }
 };
-// Asegúrate de tener esta función o ajusta según tu implementación
-
 export const updateSale = async (req, res) => {
   try {
-    const userId = req.user.user_id; // ID del usuario autenticado
-    const roleId = req.user.role_id; // Rol del usuario autenticado
-    const saleId = req.params.sale_id; // ID de la venta a actualizar
+    const userId = req.user.user_id;
+    const roleId = req.user.role_id;
+    const saleId = req.params.sale_id;
 
     const {
       service_id,
@@ -513,41 +571,14 @@ export const updateSale = async (req, res) => {
       sale_status_id
     } = req.body;
 
-    // Verifica que la venta exista
     const sale = await Sales.findByPk(saleId);
     if (!sale) {
       return res.status(404).json({ message: 'Venta no encontrada' });
     }
 
     // Verifica permisos para actualizar
-    if (sale.sale_status_id === 1) {
-      // Estado 1: Validador puede actualizar a 2, 3, 4 o 7
-      if (roleId !== 4) { // Rol 4 es Validador
-        return res.status(403).json({ message: 'No tienes permisos para actualizar esta venta' });
-      }
-    } else if (sale.sale_status_id === 3) {
-      // Estado 3: Validador puede actualizar a 2, 4 o 7
-      if (roleId !== 4) {
-        return res.status(403).json({ message: 'No tienes permisos para actualizar esta venta' });
-      }
-    } else if (sale.sale_status_id === 4) {
-      // Estado 4: Solo el Ejecutivo que creó la venta puede actualizarla
-      if (roleId !== 3 || sale.executive_id !== userId) { // Rol 3 es Ejecutivo
-        return res.status(403).json({ message: 'No tienes permisos para actualizar esta venta' });
-      }
-    } else if (sale.sale_status_id === 2) {
-      // Estado 2: Despachador puede actualizar a 1, 2, o 7
-      if (roleId !== 5) { // Rol 5 es Despachador
-        return res.status(403).json({ message: 'No tienes permisos para actualizar esta venta' });
-      }
-    } else if (sale.sale_status_id === 7) {
-      // Estado 7: Solo puede ser visto o filtrado, no actualizado.
-      return res.status(403).json({ message: 'No puedes actualizar esta venta, ya está archivada' });
-    } else {
-      // Otros roles como SuperAdmin y Administrador tienen permisos generales
-      if (![1, 2].includes(roleId)) { // Roles 1 y 2 son SuperAdmin y Administrador
-        return res.status(403).json({ message: 'No tienes permisos para actualizar esta venta' });
-      }
+    if (!canUpdateSale(roleId, sale.sale_status_id)) {
+      return res.status(403).json({ message: 'No tienes permisos para actualizar esta venta' });
     }
 
     // Verifica la validez de la región, comuna y promoción
@@ -556,7 +587,7 @@ export const updateSale = async (req, res) => {
       if (!region) {
         return res.status(400).json({ message: 'La región seleccionada no existe' });
       }
-      
+
       const commune = await Commune.findOne({ where: { commune_id, region_id } });
       if (!commune) {
         return res.status(400).json({ message: 'La comuna seleccionada no existe o no está asociada a la región' });
@@ -613,6 +644,10 @@ export const updateSale = async (req, res) => {
       modified_by_user_id: userId
     };
 
+    if (roleId === 5 && [5, 6, 7].includes(sale_status_id)) {
+      updatedSaleData.dispatcher_id = userId;
+    }
+
     await sale.update(updatedSaleData);
 
     res.status(200).json({ message: 'Venta actualizada con éxito', sale });
@@ -622,7 +657,26 @@ export const updateSale = async (req, res) => {
   }
 };
 
-
+const canUpdateSale = (roleId, saleStatusId) => {
+  switch (saleStatusId) {
+    case 1:
+      return roleId === 4; // Rol 4 es Validador
+    case 2:
+      return roleId === 5; // Rol 5 es Despachador
+    case 3:
+      return roleId === 4; // Rol 4 es Validador
+    case 4:
+      return roleId === 3 || sale.executive_id === userId; // Rol 3 es Ejecutivo
+    case 5:
+      return roleId === 5; // Rol 5 es Despachador
+    case 6:
+      return roleId === 5; // Rol 5 es Despachador
+    case 7:
+      return false; // No se puede actualizar una venta archivada
+    default:
+      return [1, 2].includes(roleId); // Roles 1 y 2 son SuperAdmin y Administrador
+  }
+};
 
 
 export const updateSaleByExecutive = async (req, res) => {

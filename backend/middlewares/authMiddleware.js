@@ -21,7 +21,6 @@ export const isAnyRole = (roles) => {
     }
   };
 };
-
 export const authenticate = async (req, res, next) => {
   const authHeader = req.header('Authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -31,13 +30,15 @@ export const authenticate = async (req, res, next) => {
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
-    const user = await User.findByPk(decoded.user_id);
+    const user = await User.findByPk(decoded.user_id, {
+      include: [{ model: Role, as: 'role' }] // Asegúrate de que este modelo se incluye
+    });
 
     if (!user) {
       return res.status(401).json({ error: 'Token inválido o usuario no encontrado' });
     }
 
-    req.user = user;  // Asignar el usuario autenticado al request
+    req.user = user; // Asignar el usuario autenticado al request
     next();
   } catch (err) {
     console.error('Error en authenticate middleware:', err);
