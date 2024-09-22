@@ -64,6 +64,7 @@ Region.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifier' });
 Commune.belongsTo(Region, { foreignKey: 'region_id', as: 'region' });
 Commune.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifier' });
 
+Promotion.hasMany(Sales, {foreignKey: 'promotion_id', as: 'sales'});
 Promotion.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifier' });
 InstallationAmount.belongsTo(Promotion, {
   foreignKey: 'installation_amount_id',

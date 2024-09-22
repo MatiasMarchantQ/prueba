@@ -427,7 +427,64 @@ export const getSalesBySearch = async (req, res) => {
   try {
     const whereClause = buildWhereClause(searchTerm, userId, userRoleId);
 
-    const sales = await Sales.findAll({ where: whereClause });
+    const sales = await Sales.findAll({
+      where: whereClause,
+      attributes: [
+        'sale_id',
+        'service_id',
+        'entry_date',
+        'client_first_name',
+        'client_last_name',
+        'client_rut',
+        'client_email',
+        'client_phone',
+        'client_secondary_phone',
+        'street',
+        'number',
+        'department_office_floor',
+        'geo_reference',
+        'additional_comments',
+        'id_card_image',
+        'created_at'
+      ],
+      include: [
+        {
+          model: SalesChannel,
+          as: 'salesChannel',
+          attributes: ['channel_name'],
+        },
+        {
+          model: Promotion,
+          as: 'promotion',
+          attributes: ['promotion'], // Revisa que este atributo coincida con el nombre correcto en la tabla de promociones
+        },
+        {
+          model: Region,
+          as: 'region',
+          attributes: ['region_name'],
+        },
+        {
+          model: Commune,
+          as: 'commune',
+          attributes: ['commune_name'],
+        },
+        {
+          model: InstallationAmount,
+          as: 'installationAmount',
+          attributes: ['amount'],
+        },
+        {
+          model: SaleStatus,
+          as: 'saleStatus',
+          attributes: ['status_name'],
+        },
+        {
+          model: Company,
+          as: 'company',
+          attributes: ['company_name'],
+        },
+      ],
+    });
 
     if (sales.length === 0) {
       return res.status(404).json({ message: 'No se encontró ninguna venta que coincida con la búsqueda' });
