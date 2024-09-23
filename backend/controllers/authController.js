@@ -44,14 +44,12 @@ export const login = async (req, res) => {
       user: {
         first_name: user.first_name,
         last_name: user.last_name,
-        role_id: role.role_id,
-        role_name: role.role_name,
-        must_change_password: (user.must_change_password === true || user.must_change_password === 1) ? 'Debe cambiar contraseña' : 'No necesita cambiar contraseña'
+        must_change_password: user.must_change_password === 1 ? 1 : 0 // Cambiado a 1 o 0
       },
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Error del servidor' });
   }
 };
 
@@ -64,19 +62,15 @@ export const logout = async (req, res) => {
   const tokenValue = token.replace('Bearer ', '');
 
   try {
-    const decoded = jwt.verify(tokenValue, process.env.SECRET_KEY, { algorithms: ['HS256'] }, (err, decoded) => {
-      if (err) {
-        console.error(err);
-        return res.status(401).json({ message: 'Token de autenticación inválido' });
-      }
-      // If the token is valid, proceed with the logout logic
-      res.status(200).json({ message: 'Sesión cerrada con éxito' });
-    });
+    jwt.verify(tokenValue, process.env.SECRET_KEY, { algorithms: ['HS256'] });
+    // Aquí podrías implementar lógica para invalidar el token si es necesario
+    res.status(200).json({ message: 'Sesión cerrada con éxito' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Error del servidor' });
+    res.status(401).json({ message: 'Token de autenticación inválido' });
   }
 };
+
 
 export const changePassword = async (req, res) => {
   const { password, confirmPassword } = req.body;

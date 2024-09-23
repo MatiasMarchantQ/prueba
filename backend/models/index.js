@@ -80,6 +80,15 @@ CompanyPriority.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
 PromotionCommune.belongsTo(Promotion, { foreignKey: 'promotion_id' });
 PromotionCommune.belongsTo(Commune, { foreignKey: 'commune_id' });
 
+Promotion.hasMany(PromotionCommune, {
+  foreignKey: 'promotion_id',
+  onDelete: 'CASCADE',
+});
+
+PromotionCommune.belongsTo(Promotion, {
+  foreignKey: 'promotion_id',
+  onDelete: 'CASCADE',
+});
 
 export { User, Role, SalesChannel, Company, Region, Commune, Sales, SaleHistory, CompanyPriority, Audit, SaleStatus, InstallationAmount, Promotion, PromotionCommune };
 export default sequelize;

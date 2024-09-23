@@ -40,6 +40,11 @@ const Promotion = sequelize.define('Promotion', {
   modified_by_user_id: {
     type: DataTypes.INTEGER(11)
   },
+  is_active: {
+    type: DataTypes.TINYINT,
+    allowNull: false,
+    defaultValue: 1, // 1 para activo, 0 para inactivo
+  },
 }, {
   tableName: 'promotions',
   timestamps: false,

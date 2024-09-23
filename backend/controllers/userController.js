@@ -384,7 +384,7 @@ export const updateMyProfile = async (req, res) => {
 
 export const updateUserByAdmin = async (req, res) => {
   try {
-    const currentUserId = req.user.user_id;
+    const currentUserId = req.user.user_id; // ID del usuario que realiza la actualización
     const currentUserRoleId = req.user.role_id;
     const targetUserId = req.params.id;
 
@@ -409,6 +409,18 @@ export const updateUserByAdmin = async (req, res) => {
     if (req.body.number) updates.number = req.body.number;
     if (req.body.department_office_floor) updates.department_office_floor = req.body.department_office_floor;
     if (req.body.rut) updates.rut = req.body.rut;
+
+    // Convertir status a número
+    if (typeof req.body.status !== 'undefined') {
+      const statusValue = Number(req.body.status);
+      if (![0, 1].includes(statusValue)) {
+        return res.status(400).json({ message: 'El estado debe ser 0 o 1' });
+      }
+      updates.status = statusValue;
+    }
+
+    // Almacenar el userId que realiza la actualización
+    updates.modified_by_user_id = currentUserId;
 
     if (currentUserRoleId === 1) { // SuperAdmin
       if (updates.email && updates.email !== userToUpdate.email) {
@@ -478,6 +490,7 @@ export const updateUserByAdmin = async (req, res) => {
     res.status(500).json({ message: 'Error del servidor al actualizar usuario' });
   }
 };
+
 
 export default {
   getAllUsers,

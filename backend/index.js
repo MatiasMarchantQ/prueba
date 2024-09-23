@@ -9,6 +9,7 @@ import communeRoutes from './routes/communeRoutes.js';
 import roleRoutes from './routes/roleRoutes.js';
 import saleschannelRoutes from './routes/saleschannelRoutes.js';
 import saleStatusRoutes from './routes/saleStatusRoutes.js';
+import promotionRoutes from './routes/promotionRoutes.js';
 import sequelize from './config/db.js';
 
 const app = express();
@@ -25,7 +26,8 @@ app.use('/api/regions', regionRoutes);
 app.use('/api/communes', communeRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/channels', saleschannelRoutes);
-app.use('/api/sale-statuses', saleStatusRoutes); // Agregar ruta
+app.use('/api/sale-statuses', saleStatusRoutes);
+app.use('/api/promotions', promotionRoutes);
 
 app.use('/uploads', express.static('uploads'));
 

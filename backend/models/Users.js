@@ -96,7 +96,7 @@ const User = sequelize.define('User', {
     }
   },
   status: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.TINYINT,
     allowNull: false,
   },
   must_change_password: {
