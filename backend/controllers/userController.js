@@ -4,6 +4,8 @@ import User from '../models/Users.js';
 import Region from '../models/Regions.js';
 import Commune from '../models/Communes.js';
 import Role from '../models/Roles.js';
+import SalesChannel from '../models/SalesChannels.js';
+import Company from '../models/Companies.js';
 import { Op } from 'sequelize';
 import { fetchUsersWithRoles } from '../services/dataServices.js';
 
@@ -18,9 +20,122 @@ export const getUsersWithRoles = async (req, res) => {
 };
 
 export const getAllUsers = async (req, res) => {
+  const { page = 1, limit = 18 } = req.query;
   try {
-    const users = await User.findAll();
+    const users = await User.findAll({
+      offset: (page - 1) * limit,
+      limit: parseInt(limit),
+      attributes: [
+        'user_id',
+        'first_name',
+        'second_name',
+        'last_name',
+        'second_last_name',
+        'rut',
+        'email',
+        'password',
+        'phone_number',
+        'street',
+        'number',
+        'department_office_floor',
+        'status',
+        'must_change_password',
+        'created_at',
+        'updated_at',
+        'modified_by_user_id'
+      ],
+      include: [
+        {
+          model: SalesChannel,
+          as: 'salesChannel',
+          attributes: ['channel_name']
+        },
+        {
+          model: Company,
+          as: 'company',
+          attributes: ['company_name']
+        },
+        {
+          model: Region,
+          as: 'region',
+          attributes: ['region_name']
+        },
+        {
+          model: Commune,
+          as: 'commune',
+          attributes: ['commune_name']
+        },
+        {
+          model: Role,
+          as: 'role',
+          attributes: ['role_name']
+        }
+      ]
+    });
     res.status(200).json({ message: 'Users found', users });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const getUserById = async (req, res) => {
+  const { user_id } = req.params;
+  try {
+    const user = await User.findOne({
+      where: { user_id },
+      attributes: [
+        'user_id',
+        'first_name',
+        'second_name',
+        'last_name',
+        'second_last_name',
+        'rut',
+        'email',
+        'password',
+        'phone_number',
+        'street',
+        'number',
+        'department_office_floor',
+        'status',
+        'must_change_password',
+        'created_at',
+        'updated_at',
+        'modified_by_user_id'
+      ],
+      include: [
+        {
+          model: SalesChannel,
+          as: 'salesChannel',
+          attributes: ['channel_name']
+        },
+        {
+          model: Company,
+          as: 'company',
+          attributes: ['company_name']
+        },
+        {
+          model: Region,
+          as: 'region',
+          attributes: ['region_name']
+        },
+        {
+          model: Commune,
+          as: 'commune',
+          attributes: ['commune_name']
+        },
+        {
+          model: Role,
+          as: 'role',
+          attributes: ['role_name']
+        }
+      ]
+    });
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+    } else {
+      res.status(200).json({ message: 'User found', user });
+    }
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
@@ -50,26 +165,40 @@ function validateUser(user) {
 
 export const register = async (req, res) => {
   try {
-    const { first_name, second_name, last_name, second_last_name, rut, email, password, phone_number, sales_channel_id, company_id, region_id, commune_id, street, number, department_office_floor, role_id } = req.body;
+    const {
+      first_name,
+      second_name,
+      last_name,
+      second_last_name,
+      rut,
+      email,
+      password,
+      phone_number,
+      sales_channel_id,
+      company_id,
+      region_id,
+      commune_id,
+      street,
+      number,
+      department_office_floor,
+      role_id,
+    } = req.body;
 
     const role = await Role.findByPk(role_id);
     if (!role) {
       return res.status(400).json({ message: 'El rol especificado no existe' });
     }
 
-    // Verificar si el RUT ya existe
     const existingUserWithRut = await User.findOne({ where: { rut } });
     if (existingUserWithRut) {
       return res.status(400).json({ message: 'El RUT ya está registrado' });
     }
 
-    // Verificar si el email ya existe
     const existingUserWithEmail = await User.findOne({ where: { email } });
     if (existingUserWithEmail) {
       return res.status(400).json({ message: 'El email ya está registrado' });
     }
 
-    // Verificar que la comuna esté asociada a la región
     const commune = await Commune.findByPk(commune_id);
     if (!commune || commune.region_id !== region_id) {
       return res.status(400).json({ message: 'La comuna no está asociada a la región seleccionada' });
@@ -112,9 +241,23 @@ export const registerUserByAdmin = async (req, res) => {
       return res.status(401).json({ message: 'No autenticado' });
     }
 
-    const { first_name, second_name, last_name, second_last_name, rut, email, password, phone_number, region_id, commune_id, street, number, department_office_floor, role_id } = req.body;
-    
-    // Verificar que el role_id sea válido y esté dentro de los roles permitidos
+    const {
+      first_name,
+      second_name,
+      last_name,
+      second_last_name,
+      rut,
+      email,
+      password,
+      phone_number,
+      region_id,
+      commune_id,
+      street,
+      number,
+      department_office_floor,
+      role_id,
+    } = req.body;
+
     if (![3, 4, 6].includes(role_id)) {
       return res.status(400).json({ message: 'El rol especificado no es válido. Debe ser 3, 4 o 6' });
     }
@@ -124,19 +267,16 @@ export const registerUserByAdmin = async (req, res) => {
       return res.status(400).json({ message: 'El rol especificado no existe' });
     }
 
-    // Verificar si el RUT ya existe
     const existingUserWithRut = await User.findOne({ where: { rut } });
     if (existingUserWithRut) {
       return res.status(400).json({ message: 'El RUT ya está registrado' });
     }
 
-    // Verificar si el email ya existe
     const existingUserWithEmail = await User.findOne({ where: { email } });
     if (existingUserWithEmail) {
       return res.status(400).json({ message: 'El email ya está registrado' });
     }
 
-    // Verificar que la comuna esté asociada a la región
     const commune = await Commune.findByPk(commune_id);
     if (!commune || commune.region_id !== region_id) {
       return res.status(400).json({ message: 'La comuna no está asociada a la región seleccionada' });
@@ -242,140 +382,99 @@ export const updateMyProfile = async (req, res) => {
   }
 };
 
-
 export const updateUserByAdmin = async (req, res) => {
   try {
-    const currentUserId = req.user.user_id; // ID del usuario autenticado
-    const currentUserRoleId = req.user.role_id; // Rol del usuario autenticado
-    const targetUserId = req.params.id; // ID del usuario a actualizar
+    const currentUserId = req.user.user_id;
+    const currentUserRoleId = req.user.role_id;
+    const targetUserId = req.params.id;
 
-    // Datos a actualizar
-    const { 
-      first_name, second_name, last_name, second_last_name, email, phone_number, sales_channel_id, company_id, region_id, commune_id, street, number, department_office_floor, password, rut 
-    } = req.body;
-
-    // Verifica si el usuario objetivo existe
     const userToUpdate = await User.findByPk(targetUserId);
     if (!userToUpdate) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
-    // Lógica para SuperAdmin
-    if (currentUserRoleId === 1) { // Asumiendo que el rol de SuperAdmin es 1
-      // Verifica si el nuevo email ya está en uso por otro usuario
-      if (email && email !== userToUpdate.email) {
-        const existingUserWithEmail = await User.findOne({ where: { email } });
+    const updates = {};
+
+    if (req.body.first_name) updates.first_name = req.body.first_name;
+    if (req.body.second_name) updates.second_name = req.body.second_name;
+    if (req.body.last_name) updates.last_name = req.body.last_name;
+    if (req.body.second_last_name) updates.second_last_name = req.body.second_last_name;
+    if (req.body.email) updates.email = req.body.email;
+    if (req.body.phone_number) updates.phone_number = req.body.phone_number;
+    if (req.body.sales_channel_id) updates.sales_channel_id = req.body.sales_channel_id;
+    if (req.body.company_id) updates.company_id = req.body.company_id;
+    if (req.body.region_id) updates.region_id = req.body.region_id;
+    if (req.body.commune_id) updates.commune_id = req.body.commune_id;
+    if (req.body.street) updates.street = req.body.street;
+    if (req.body.number) updates.number = req.body.number;
+    if (req.body.department_office_floor) updates.department_office_floor = req.body.department_office_floor;
+    if (req.body.rut) updates.rut = req.body.rut;
+
+    if (currentUserRoleId === 1) { // SuperAdmin
+      if (updates.email && updates.email !== userToUpdate.email) {
+        const existingUserWithEmail = await User.findOne({ where: { email: updates.email } });
         if (existingUserWithEmail) {
           return res.status(400).json({ message: 'El email ya está registrado' });
         }
       }
 
-      // Verifica si el nuevo RUT ya está en uso por otro usuario
-      if (rut && rut !== userToUpdate.rut) {
-        const existingUserWithRut = await User.findOne({ where: { rut } });
+      if (updates.rut && updates.rut !== userToUpdate.rut) {
+        const existingUserWithRut = await User.findOne({ where: { rut: updates.rut } });
         if (existingUserWithRut) {
           return res.status(400).json({ message: 'El RUT ya está registrado' });
         }
       }
 
-      // Verifica que la comuna esté asociada a la región
-      if (commune_id) {
-        const commune = await Commune.findByPk(commune_id);
-        if (!commune || commune.region_id !== region_id) {
+      if (updates.commune_id) {
+        const commune = await Commune.findByPk(updates.commune_id);
+        if (!commune || commune.region_id !== updates.region_id) {
           return res.status(400).json({ message: 'La comuna no está asociada a la región seleccionada' });
         }
       }
 
-      // Si se proporciona una nueva contraseña, hashearla
-      let hashedPassword;
-      if (password) {
-        hashedPassword = await bcrypt.hash(password, 10);
+      if (req.body.password) {
+        const hashedPassword = await bcrypt.hash(req.body.password, 10);
+        updates.password = hashedPassword;
       }
-
-      // Actualiza los datos del usuario
-      await userToUpdate.update({
-        first_name,
-        second_name,
-        last_name,
-        second_last_name,
-        email,
-        phone_number,
-        sales_channel_id,
-        company_id,
-        region_id,
-        commune_id,
-        street,
-        number,
-        department_office_floor,
-        password: hashedPassword ? hashedPassword : userToUpdate.password, // Solo actualiza la contraseña si se proporciona una nueva
-        rut // Actualiza el RUT si se proporciona uno nuevo
-      });
-
-      return res.status(200).json({ message: 'Usuario actualizado con éxito', user: userToUpdate });
     }
 
-    // Lógica para Administrador
-    if (currentUserRoleId === 2) { // Asumiendo que el rol de Administrador es 2
+    if (currentUserRoleId === 2) { // Administrador
       if (userToUpdate.company_id !== req.user.company_id) {
         return res.status(403).json({ message: 'No tienes permisos para actualizar este usuario' });
       }
 
-      // Verifica si el nuevo email ya está en uso por otro usuario
-      if (email && email !== userToUpdate.email) {
-        const existingUserWithEmail = await User.findOne({ where: { email } });
+      if (updates.email && updates.email !== userToUpdate.email) {
+        const existingUserWithEmail = await User.findOne({ where: { email: updates.email } });
         if (existingUserWithEmail) {
           return res.status(400).json({ message: 'El email ya está registrado' });
         }
       }
 
-      // Verifica si el nuevo RUT ya está en uso por otro usuario
-      if (rut && rut !== userToUpdate.rut) {
-        const existingUserWithRut = await User.findOne({ where: { rut } });
+      if (updates.rut && updates.rut !== userToUpdate.rut) {
+        const existingUserWithRut = await User.findOne({ where: { rut: updates.rut } });
         if (existingUserWithRut) {
           return res.status(400).json({ message: 'El RUT ya está registrado' });
         }
       }
 
-      // Verifica que la comuna esté asociada a la región
-      if (commune_id) {
-        const commune = await Commune.findByPk(commune_id);
-        if (!commune || commune.region_id !== region_id) {
+      if (updates.commune_id) {
+        const commune = await Commune.findByPk(updates.commune_id);
+        if (!commune || commune.region_id !== updates.region_id) {
           return res.status(400).json({ message: 'La comuna no está asociada a la región seleccionada' });
         }
       }
 
-      // Si se proporciona una nueva contraseña, hashearla
-      let hashedPassword;
-      if (password) {
-        hashedPassword = await bcrypt.hash(password, 10);
+      if (req.body.password) {
+        const hashedPassword = await bcrypt.hash(req.body.password, 10);
+        updates.password = hashedPassword;
       }
-
-      // Actualiza los datos del usuario
-      await userToUpdate.update({
-        first_name,
-        second_name,
-        last_name,
-        second_last_name,
-        email,
-        phone_number,
-        sales_channel_id,
-        company_id,
-        region_id,
-        commune_id,
-        street,
-        number,
-        department_office_floor,
-        password: hashedPassword ? hashedPassword : userToUpdate.password, // Solo actualiza la contraseña si se proporciona una nueva
-        rut // Actualiza el RUT si se proporciona uno nuevo
-      });
-
-      return res.status(200).json({ message: 'Usuario actualizado con éxito', user: userToUpdate });
     }
 
-    // Si el usuario no es SuperAdmin ni Administrador
-    res.status(403).json({ message: 'No tienes permisos para actualizar usuarios' });
+    await userToUpdate.update(updates);
+
+    return res.status(200).json({ message: 'Usuario actualizado con éxito', user: userToUpdate });
   } catch (error) {
-    console.error('Error al actualizar el usuario:', error);
+    console.error(error);
     res.status(500).json({ message: 'Error del servidor al actualizar usuario' });
   }
 };
