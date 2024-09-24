@@ -18,14 +18,20 @@ import { Sequelize, DataTypes } from 'sequelize';
 import { sendEmailNotification } from '../services/emailService.js';
 
 const handleFileRenaming = (files, clientRut) => {
+  if (files.length > 3) throw new Error('You can upload up to 3 images.');
+
   return files
-    .filter(file => file && file.path)
+    .slice(0, 3) // Limitar a 3 imágenes
+    .filter(file => file && file.path) // Asegúrate de que file.path esté disponible
     .map(file => {
       const ext = path.extname(file.originalname);
       const newFileName = `${clientRut}_${Date.now()}${ext}`;
       const newFilePath = path.join(path.dirname(file.path), newFileName);
       fs.renameSync(file.path, newFilePath);
-      return newFilePath;
+      return {
+        filename: newFileName,
+        path: newFilePath
+      };
     });
 };
 
@@ -47,6 +53,8 @@ const validateInputs = async (reqBody) => {
 const createSaleData = (reqBody, idCardImages, currentUser, installationAmountId, companyPriorityId) => {
   const { service_id, entry_date, client_first_name, client_last_name, client_rut, client_email, client_phone, client_secondary_phone, region_id, commune_id, street, number, department_office_floor, geo_reference, promotion_id, additional_comments } = reqBody;
 
+  const idCardImagePaths = idCardImages.map((image) => image.path);
+
   return {
     service_id: service_id || null,
     entry_date,
@@ -66,7 +74,7 @@ const createSaleData = (reqBody, idCardImages, currentUser, installationAmountId
     promotion_id,
     installation_amount_id: installationAmountId,
     additional_comments: additional_comments || null,
-    id_card_image: JSON.stringify(idCardImages) || null,
+    id_card_image: idCardImagePaths.join(','),
     sale_status_id: 1,
     executive_id: currentUser.role_id === 3 ? currentUser.user_id : null,
     validator_id: null,
@@ -79,43 +87,68 @@ const createSaleData = (reqBody, idCardImages, currentUser, installationAmountId
 
 export const createSale = async (req, res) => {
   try {
+    // Normalizar el cuerpo de la solicitud
     const reqBody = Object.keys(req.body).reduce((acc, key) => {
       acc[key.trim()] = req.body[key];
       return acc;
     }, {});
 
     const files = req.files;
-    if (!files || files.length === 0) return res.status(400).json({ message: 'No files provided' });
+    if (!files || files.length === 0) {
+      return res.status(400).json({ message: 'No files provided' });
+    }
 
     const idCardImages = handleFileRenaming(files, reqBody.client_rut);
-    if (idCardImages.length === 0) return res.status(400).json({ message: 'No valid id card images provided' });
+    if (idCardImages.length === 0) {
+      return res.status(400).json({ message: 'No valid id card images provided' });
+    }
 
+    // Validar entradas
     const promotion = await validateInputs(reqBody);
+    
+    // Obtener información del usuario actual
     const currentUser = await User.findByPk(req.user.user_id);
-    if (!currentUser) return res.status(400).json({ message: 'Usuario no encontrado' });
+    if (!currentUser) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
 
-    const companyPriority = await CompanyPriority.findOne({ where: { company_id: currentUser.company_id }, order: [['priority_level', 'ASC']] });
-    if (!companyPriority) return res.status(400).json({ message: 'No se encontró la prioridad de la compañía' });
+    // Obtener prioridad de la compañía
+    const companyPriority = await CompanyPriority.findOne({ 
+      where: { company_id: currentUser.company_id }, 
+      order: [['priority_level', 'ASC']] 
+    });
+    if (!companyPriority) {
+      return res.status(404).json({ message: 'No se encontró la prioridad de la compañía' });
+    }
 
+    // Verificar existencia del RUT y email
     const existingRut = await Sales.findOne({ where: { client_rut: reqBody.client_rut } });
-    if (existingRut) return res.status(400).json({ message: 'El RUT ya existe en la base de datos' });
+    if (existingRut) {
+      return res.status(400).json({ message: 'El RUT ya existe en la base de datos' });
+    }
 
     const existingEmail = await Sales.findOne({ where: { client_email: reqBody.client_email } });
-    if (existingEmail) return res.status(400).json({ message: 'El email ya existe en la base de datos' });
+    if (existingEmail) {
+      return res.status(400).json({ message: 'El email ya existe en la base de datos' });
+    }
 
+    // Crear los datos de la venta
     const saleData = createSaleData(reqBody, idCardImages, currentUser, promotion.installation_amount_id, companyPriority.priority_level);
     const sale = await Sales.create(saleData);
 
+    // Enviar notificación por correo si la venta se encuentra en estado inicial
     if (saleData.sale_status_id === 1) {
-      await sendEmailNotification(sale, currentUser, reqBody); // Llamada al servicio de correo
+      await sendEmailNotification(sale, currentUser, reqBody, idCardImages);
     }
-    
+
     res.status(201).json(sale);
   } catch (error) {
     console.error('Error details:', error);
     res.status(500).json({ message: 'Error creating sale', error: error.message });
   }
 };
+
+
 
 
 export const getSales = async (req, res) => {
@@ -329,28 +362,15 @@ export const getSaleById = async (req, res) => {
       return res.status(404).json({ message: 'Venta no encontrada' });
     }
 
-    if (sale.id_card_image) {
-      const cleanedIdCardImage = sale.id_card_image.replace(/\\/g, '/'); // Reemplazar barras invertidas por barras normales
-      
-      try {
-        const idCardImagesArray = JSON.parse(cleanedIdCardImage); // Convertir el string JSON en un array
-    
-        // Verificar que idCardImagesArray es un arreglo
-        if (Array.isArray(idCardImagesArray)) {
-          // Generar enlaces clicables para las imágenes
-          sale.id_card_image_links = idCardImagesArray.map(image => ({
-            url: `${req.protocol}://${req.get('host')}${image}`, // Generar URL completa
-            label: image.split('/').pop(), // Obtener el nombre del archivo
-          }));
-        } else {
-          console.error('idCardImagesArray no es un arreglo:', idCardImagesArray);
-          sale.id_card_image_links = []; // Manejo de error: asignar un arreglo vacío
-        }
-      } catch (jsonError) {
-        console.error('Error al analizar id_card_image:', jsonError);
-        sale.id_card_image_links = []; // Manejo de error: asignar un arreglo vacío
-      }
-    }
+    const idCardImagePaths = sale.id_card_image.split(',');
+    const idCardImages = idCardImagePaths.map((path) => {
+      return {
+        url: `${req.protocol}://${req.get('host')}${path}`,
+        label: path.split('/').pop(),
+      };
+    });
+
+    sale.id_card_image_links = idCardImages;
 
     res.json(sale);
   } catch (error) {
@@ -366,20 +386,19 @@ export const getPromotionsByCommune = async (req, res) => {
 
   try {
     const promotions = await fetchPromotionsByCommune(communeId);
-    res.json(promotions);
+    const activePromotions = promotions.filter(promotion => promotion.is_active === 1);
+    res.json(activePromotions);
   } catch (error) {
     handleError(res, 'Error obteniendo promociones', error);
   }
 };
-
 const fetchPromotionsByCommune = async (communeId) => {
-  return await PromotionCommune.findAll({
-    where: { commune_id: communeId },
-    attributes: ['promotion_id'],
+  return await Promotion.findAll({
+    where: { is_active: 1 },
     include: [
       {
-        model: Promotion,
-        attributes: ['promotion_id', 'promotion'],
+        model: PromotionCommune,
+        where: { commune_id: communeId, is_active: 1 },
       },
     ],
   });

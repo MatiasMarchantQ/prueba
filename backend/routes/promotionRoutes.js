@@ -1,16 +1,34 @@
 import { Router } from 'express';
-import { addPromotionWithCommunes, getInstallationAmounts, getPromotions, updateInstallationAmountForPromotion} from '../controllers/promotionController.js';
+import { addPromotionWithInstallationAmount, editPromotion, getInstallationAmounts, getPromotions, updateInstallationAmountForPromotion, assignPromotionsToCommune, disablePromotionsForCommune} from '../controllers/promotionController.js';
 import { authenticate } from '../middlewares/authMiddleware.js'; // Asegúrate de importar el middleware de autenticación
 
 const router = Router();
 
-// Ruta para crear promoción con comunas
+//Devuelve lista de promociones
 router.get('/', authenticate, getPromotions);
+
+//Devuelve la cantidad de instalaciones por una promocion especifica
 router.get('/installation-amounts', getInstallationAmounts);
+
+
+
+//Actualiza el monto de instalacion para una promocion especifica. El :promotionId es la promo a actualizar
+//LISTO
 router.patch('/promotions/:promotionId/installation-amount', updateInstallationAmountForPromotion);
 
-router.post('/', authenticate, addPromotionWithCommunes);
+//Crea nuevas promociones
+//LISTO
+router.post('/', authenticate, addPromotionWithInstallationAmount);
 
-// Otras rutas para editar, eliminar, etc.
+//Asigna promociones a una comuna especifica. El :communeId es la comuna a la que se le asignara la o las promociones
+//LISTO
+router.post('/communes/:communeId/promotions', assignPromotionsToCommune);
+
+//Actualiza una promocion existente
+//LISTO
+router.patch('/:promotionId', editPromotion);
+
+// Deshabilitar promociones por comuna
+router.patch('/communes/:communeId/promotions/disable', disablePromotionsForCommune);
 
 export default router;

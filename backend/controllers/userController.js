@@ -317,7 +317,7 @@ export const registerUserByAdmin = async (req, res) => {
 export const updateMyProfile = async (req, res) => {
   try {
     const userId = req.user.user_id; // Obtén el ID del usuario autenticado
-    const { first_name, second_name, last_name, second_last_name, email, phone_number, sales_channel_id, company_id, region_id, commune_id, street, number, department_office_floor, password, rut } = req.body;
+    const { first_name, second_name, last_name, second_last_name, email, phone_number, sales_channel_id, company_id, region_id, commune_id, street, number, department_office_floor, rut } = req.body;
 
     // Busca el usuario por ID
     const user = await User.findByPk(userId);
@@ -350,12 +350,6 @@ export const updateMyProfile = async (req, res) => {
       }
     }
 
-    // Si se proporciona una nueva contraseña, hashearla
-    let hashedPassword;
-    if (password) {
-      hashedPassword = await bcrypt.hash(password, 10);
-    }
-
     // Actualiza los datos del usuario
     await user.update({
       first_name,
@@ -371,7 +365,6 @@ export const updateMyProfile = async (req, res) => {
       street,
       number,
       department_office_floor,
-      password: hashedPassword ? hashedPassword : user.password, // Solo actualiza la contraseña si se proporciona una nueva
       rut // Actualiza el RUT si se proporciona uno nuevo
     });
 
@@ -379,6 +372,39 @@ export const updateMyProfile = async (req, res) => {
   } catch (error) {
     console.error('Error al actualizar el perfil:', error);
     res.status(500).json({ message: 'Error del servidor al actualizar perfil' });
+  }
+};
+
+export const changePassword = async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({ message: 'Debes proporcionar la contraseña actual, la nueva contraseña y confirmar la nueva contraseña' });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ message: 'La nueva contraseña y la confirmación no coinciden' });
+    }
+
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+    if (!isValidPassword) {
+      return res.status(400).json({ message: 'La contraseña actual no es correcta' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await user.update({ password: hashedPassword });
+
+    res.status(200).json({ message: 'Contraseña actualizada con éxito' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error del servidor al cambiar la contraseña' });
   }
 };
 
@@ -409,6 +435,9 @@ export const updateUserByAdmin = async (req, res) => {
     if (req.body.number) updates.number = req.body.number;
     if (req.body.department_office_floor) updates.department_office_floor = req.body.department_office_floor;
     if (req.body.rut) updates.rut = req.body.rut;
+    if (req.body.role_id) {
+      updates.role_id = req.body.role_id;
+    }
 
     // Convertir status a número
     if (typeof req.body.status !== 'undefined') {

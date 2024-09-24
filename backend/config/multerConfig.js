@@ -1,32 +1,30 @@
 import multer from 'multer';
 import path from 'path';
 
+// Configuración de almacenamiento para multer
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/'); // Directorio donde se guardan los archivos
+  destination(req, file, cb) {
+    cb(null, 'uploads/'); // Carpeta donde se guardarán los archivos
   },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  filename(req, file, cb) {
+    const ext = path.extname(file.originalname);
+    const fileName = `${Date.now()}_${file.originalname}`;
+    cb(null, fileName);
   }
 });
 
-const fileFilter = (req, file, cb) => {
-  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-  if (!allowedTypes.includes(file.mimetype)) {
-    return cb(new Error('Tipo de archivo no permitido'), false);
-  }
-  cb(null, true);
-};
-
-const limits = {
-  fileSize: 1024 * 1024 * 5 // Limitar a 5MB por archivo
-};
-
+// Configuración de multer
 const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
-  limits: limits
+  storage,
+  limits: {
+    fileSize: 2 * 1024 * 1024 // Limitar a 2MB por archivo
+  },
+  fileFilter(req, file, cb) {
+    if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
+      return cb(new Error('Please upload an image in JPG or PNG format'));
+    }
+    cb(undefined, true);
+  }
 });
 
 export default upload;

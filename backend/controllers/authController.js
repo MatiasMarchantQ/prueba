@@ -29,10 +29,13 @@ export const login = async (req, res) => {
 
     if (user.must_change_password === 1) {
       const token = jwt.sign({ user_id: user.user_id, role_id: user.role_id }, process.env.SECRET_KEY, { expiresIn: '1h' });
-      return res.status(403).json({
-        message: 'Debes cambiar tu contraseña',
+      return res.status(200).json({
+        message: 'Login exitoso',
         token,
-        redirect: '/change-password?token=' + token + '&user_id=' + user.user_id,
+        user: {
+          first_name: user.first_name,
+          status: user.status,
+        },
       });
     }
 
@@ -43,8 +46,8 @@ export const login = async (req, res) => {
       token,
       user: {
         first_name: user.first_name,
-        last_name: user.last_name,
-        must_change_password: user.must_change_password === 1 ? 1 : 0 // Cambiado a 1 o 0
+        must_change_password: user.must_change_password,
+        status: user.status,
       },
     });
   } catch (err) {

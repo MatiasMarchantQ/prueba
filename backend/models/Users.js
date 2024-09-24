@@ -100,7 +100,7 @@ const User = sequelize.define('User', {
     allowNull: false,
   },
   must_change_password: {
-    type: DataTypes.BOOLEAN,
+    type: DataTypes.TINYINT,
     allowNull: false,
   },
   created_at: {
