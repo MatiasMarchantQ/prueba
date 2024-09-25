@@ -1,4 +1,5 @@
 import  SaleStatus  from "../models/SaleStatuses.js";
+import SaleStatusReason from "../models/SaleStatusReason.js";
 
 export const getSaleStatuses = async (req, res) => {
   try {
@@ -39,5 +40,21 @@ export const getSaleStatuses = async (req, res) => {
   } catch (error) {
     console.error('Error fetching sale statuses:', error);
     res.status(500).json({ message: 'Error fetching sale statuses', error: error.message });
+  }
+};
+
+export const getReasons = async (req, res) => {
+  try {
+    const saleStatusId = req.params.saleStatusId;
+    const reasons = await SaleStatusReason.findAll({
+      where: {
+        sale_status_id: saleStatusId
+      },
+      attributes: ['sale_status_reason_id', 'reason_name']
+    });
+    res.status(200).json(reasons);
+  } catch (error) {
+    console.error('Error fetching reasons:', error);
+    res.status(500).json({ message: 'Error fetching reasons', error: error.message });
   }
 };

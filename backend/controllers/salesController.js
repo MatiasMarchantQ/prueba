@@ -10,6 +10,7 @@ import PromotionCommune from '../models/PromotionsCommunes.js';
 import Company from '../models/Companies.js';
 import CompanyPriority from '../models/CompanyPriorities.js';
 import SaleStatus from '../models/SaleStatuses.js';
+import SaleStatusReason from '../models/SaleStatusReason.js';
 import path from 'path';
 import fs from 'fs';
 import { fetchRegionById } from '../services/dataServices.js';
@@ -36,7 +37,7 @@ const handleFileRenaming = (files, clientRut) => {
 };
 
 const validateInputs = async (reqBody) => {
-  const { region_id, commune_id, promotion_id } = reqBody;
+  const { region_id, commune_id, promotion_id, sale_status_id, sale_status_reason_id } = reqBody;
 
   const region = await fetchRegionById(region_id);
   if (!region) throw new Error('La región seleccionada no existe');
@@ -47,6 +48,17 @@ const validateInputs = async (reqBody) => {
   const promotion = await Promotion.findByPk(promotion_id);
   if (!promotion) throw new Error('La promoción seleccionada no existe');
 
+  const saleStatus = await SaleStatus.findByPk(sale_status_id);
+  if (!saleStatus) throw new Error('El estado de venta seleccionado no existe');
+
+  const saleStatusReason = await SaleStatusReason.findOne({
+    where: {
+      sale_status_id,
+      sale_status_reason_id,
+    },
+  });
+  if (!saleStatusReason) throw new Error('El motivo de estado de venta no está asociado al estado de venta');
+
   return promotion;
 };
 
@@ -54,6 +66,8 @@ const createSaleData = (reqBody, idCardImages, currentUser, installationAmountId
   const { service_id, entry_date, client_first_name, client_last_name, client_rut, client_email, client_phone, client_secondary_phone, region_id, commune_id, street, number, department_office_floor, geo_reference, promotion_id, additional_comments } = reqBody;
 
   const idCardImagePaths = idCardImages.map((image) => image.path);
+  const saleStatusId = reqBody.sale_status_id;
+  const saleStatusReasonId = saleStatusId === 1 ? null : reqBody.sale_status_reason_id || null;
 
   return {
     service_id: service_id || null,
@@ -76,6 +90,7 @@ const createSaleData = (reqBody, idCardImages, currentUser, installationAmountId
     additional_comments: additional_comments || null,
     id_card_image: idCardImagePaths.join(','),
     sale_status_id: 1,
+    sale_status_reason_id: saleStatusReasonId,
     executive_id: currentUser.role_id === 3 ? currentUser.user_id : null,
     validator_id: null,
     dispatcher_id: null,
@@ -254,6 +269,11 @@ const getSalesIncludes = () => [
     attributes: ['status_name'],
   },
   {
+    model: SaleStatusReason,
+    as: 'reason',
+    attributes: ['reason_name'],
+  }, 
+  {
     model: User,
     as: 'executive',
     attributes: [
@@ -334,6 +354,11 @@ export const getSaleById = async (req, res) => {
           as: 'saleStatus',
           attributes: ['status_name'],
         },
+        {
+          model: SaleStatusReason,
+          as: 'reason',
+          attributes: ['reason_name'],
+        },      
         {
           model: User,
           as: 'executive',
@@ -498,11 +523,17 @@ export const getSalesBySearch = async (req, res) => {
           attributes: ['status_name'],
         },
         {
+          model: SaleStatusReason,
+          as: 'reason',
+          attributes: ['reason_name'],
+        },
+        {
           model: Company,
           as: 'company',
           attributes: ['company_name'],
         },
       ],
+      order: [['created_at','DESC']],
     });
 
     if (sales.length === 0) {
@@ -520,31 +551,31 @@ const buildWhereClause = (searchTerm, userId, userRoleId) => {
   const conditions = {
     [Op.and]: [],
     [Op.or]: [
-      { client_first_name: { [Op.like]: `%${searchTerm}%` } },
-      { client_last_name: { [Op.like]: `%${searchTerm}%` } },
-      { client_rut: { [Op.like]: `%${searchTerm}%` } },
-      { client_email: { [Op.like]: `%${searchTerm}%` } },
-      { client_phone: { [Op.like]: `%${searchTerm}%` } },
-      { street: { [Op.like]: `%${searchTerm}%` } },
-      { service_id: { [Op.like]: `%${searchTerm}%` } },
+      { client_first_name: { [Op.like]: `%${searchTerm.toLowerCase()}%` } },
+      { client_last_name: { [Op.like]: `%${searchTerm.toLowerCase()}%` } },
+      { client_rut: { [Op.like]: `%${searchTerm.toLowerCase()}%` } },
+      { client_email: { [Op.like]: `%${searchTerm.toLowerCase()}%` } },
+      { client_phone: { [Op.like]: `%${searchTerm.toLowerCase()}%` } },
+      { street: { [Op.like]: `%${searchTerm.toLowerCase()}%` } },
+      { service_id: { [Op.like]: `%${searchTerm.toLowerCase()}%` } },
     ],
   };
 
   // Condiciones según el role_id
   if (userRoleId === 1 || userRoleId === 4) {
-    // roles 1 y 4 pueden buscar libremente
+    // roles 1(SuperAdmin) y 4(Valid) pueden buscar libremente
     return conditions;
   } else if (userRoleId === 2) {
-    // rol 2: buscar por company_id asociado
-    conditions[Op.and].push({ company_id: req.user.company_id });
+    // rol 2(Admin): buscar por company_id asociado
+    conditions[Op.and].push({ company_id: userId });
   } else if (userRoleId === 3) {
-    // rol 3: buscar solo por executive_id y sale_status_id 1 o 4
+    // rol 3(Ejec): buscar solo por executive_id y sale_status_id 1 o 4
     conditions[Op.and].push({ executive_id: userId });
     conditions[Op.and].push({ 
       [Op.or]: [{ sale_status_id: 1 }, { sale_status_id: 4 }] 
     });
   } else if (userRoleId === 4) {
-    // rol 4: buscar solo por sale_status_id 2, 5 o 6
+    // rol 4(Despachador): buscar solo por sale_status_id 2, 5 o 6
     conditions[Op.and].push({ 
       [Op.or]: [{ sale_status_id: 2 }, { sale_status_id: 5 }, { sale_status_id: 6 }] 
     });
@@ -553,75 +584,6 @@ const buildWhereClause = (searchTerm, userId, userRoleId) => {
   return conditions;
 };
 
-
-
-export const getExecutiveSales = async (req, res) => {
-  try {
-    // Obtén el user_id del usuario autenticado
-    const userId = req.user.user_id;
-
-    // Obtener el company_id del usuario autenticado desde la tabla User
-    const user = await User.findByPk(userId, {
-      attributes: ['company_id'], // Solo necesitas company_id para la consulta
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    const companyId = user.company_id;
-
-    // Verificar si el user_id es un executive_id en la tabla Sales
-    const sales = await Sales.findAll({
-      where: {
-        executive_id: userId,
-        company_id: companyId,
-      },
-      attributes: [
-        'sale_id',
-        'service_id',
-        'entry_date',
-        'sales_channel_id',
-        'client_first_name',
-        'client_last_name',
-        'client_rut',
-        'client_email',
-        'client_phone',
-        'client_secondary_phone',
-        'region_id',
-        'commune_id',
-        'street',
-        'number',
-        'department_office_floor',
-        'geo_reference',
-        'promotion_id',
-        'installation_amount_id',
-        'additional_comments',
-        'id_card_image',
-        'simple_power_image',
-        'house_image',
-        'sale_status_id',
-        'executive_id',
-        'validator_id',
-        'dispatcher_id',
-        'created_at',
-        'updated_at',
-        'modified_by_user_id',
-        'company_id',
-        'company_priority_id',
-      ],
-    });
-
-    if (sales.length === 0) {
-      return res.status(404).json({ message: 'No sales found for the executive in this company' });
-    }
-
-    res.json(sales);
-  } catch (error) {
-    console.error('Error fetching executive sales:', error);
-    res.status(500).json({ message: 'Error fetching executive sales', error: error.message });
-  }
-};
 export const updateSale = async (req, res) => {
   try {
     const userId = req.user.user_id;
@@ -644,7 +606,8 @@ export const updateSale = async (req, res) => {
       geo_reference,
       promotion_id,
       additional_comments,
-      sale_status_id
+      sale_status_id,
+      sale_status_reason_id
     } = req.body;
 
     const sale = await Sales.findByPk(saleId);
@@ -653,7 +616,7 @@ export const updateSale = async (req, res) => {
     }
 
     // Verifica permisos para actualizar
-    if (!canUpdateSale(roleId, sale.sale_status_id)) {
+    if (!await canUpdateSale(roleId, sale_status_id, userId, saleId)) {
       return res.status(403).json({ message: 'No tienes permisos para actualizar esta venta' });
     }
 
@@ -720,6 +683,11 @@ export const updateSale = async (req, res) => {
       modified_by_user_id: userId
     };
 
+    // Agregamos la lógica para actualizar el motivo de rechazo
+    if (roleId !== 3) {
+      updatedSaleData.sale_status_reason_id = sale_status_reason_id;
+    }
+
     if (roleId === 5 && [5, 6, 7].includes(sale_status_id)) {
       updatedSaleData.dispatcher_id = userId;
     }
@@ -733,7 +701,20 @@ export const updateSale = async (req, res) => {
   }
 };
 
-const canUpdateSale = (roleId, saleStatusId) => {
+const canUpdateSale = async (roleId, saleStatusId, userId, saleId, companyId) => {
+  if (roleId === 1) {
+    return true; // Rol 1 puede actualizar el saleStatusId a cualquiera
+  }
+
+  if (roleId === 2) {
+    const sale = await Sales.findByPk(saleId);
+    return sale.company_id === companyId; // Rol 2 puede actualizar solo si la venta es de su company_id
+  }
+
+  if (saleStatusId === 7) {
+    return true; // Ventas con saleStatusId en 7 pueden ser actualizadas
+  }
+
   switch (saleStatusId) {
     case 1:
       return roleId === 4; // Rol 4 es Validador
@@ -742,15 +723,14 @@ const canUpdateSale = (roleId, saleStatusId) => {
     case 3:
       return roleId === 4; // Rol 4 es Validador
     case 4:
-      return roleId === 3 || sale.executive_id === userId; // Rol 3 es Ejecutivo
+      const sale = await Sales.findByPk(saleId);
+      return roleId === 3 && sale.executive_id === userId; // Rol 3 es Ejecutivo
     case 5:
       return roleId === 5; // Rol 5 es Despachador
     case 6:
       return roleId === 5; // Rol 5 es Despachador
-    case 7:
-      return false; // No se puede actualizar una venta archivada
     default:
-      return [1, 2].includes(roleId); // Roles 1 y 2 son SuperAdmin y Administrador
+      return false;
   }
 };
 
@@ -845,7 +825,6 @@ export default {
   getPromotionsByCommune,
   getInstallationAmountsByPromotion,
   getSales,
-  getExecutiveSales,
   updateSale,
   updateSaleByExecutive,
 };

@@ -108,6 +108,14 @@ const Sales = sequelize.define('Sales', {
       key: 'sale_status_id',
     },
   },
+  sale_status_reason_id: {
+    type: DataTypes.INTEGER(11),
+    allowNull: true,
+    references: {
+      model: 'SaleStatusReason',
+      key: 'sale_status_reason_id',
+    },
+  },
   executive_id: {
     type: DataTypes.INTEGER(11),
     references: {

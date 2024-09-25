@@ -313,11 +313,10 @@ export const registerUserByAdmin = async (req, res) => {
   }
 };
 
-
 export const updateMyProfile = async (req, res) => {
   try {
-    const userId = req.user.user_id; // Obtén el ID del usuario autenticado
-    const { first_name, second_name, last_name, second_last_name, email, phone_number, sales_channel_id, company_id, region_id, commune_id, street, number, department_office_floor, rut } = req.body;
+    const userId = req.user.user_id;
+    const { first_name, second_name, last_name, second_last_name, email, phone_number, region_id, commune_id, street, number, department_office_floor, rut } = req.body;
 
     // Busca el usuario por ID
     const user = await User.findByPk(userId);
@@ -326,31 +325,26 @@ export const updateMyProfile = async (req, res) => {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
-    // Verifica si el nuevo email ya está en uso por otro usuario
-    if (email && email !== user.email) {
-      const existingUserWithEmail = await User.findOne({ where: { email } });
-      if (existingUserWithEmail) {
-        return res.status(400).json({ message: 'El email ya está registrado' });
-      }
+    // Verifica si el region_id es válido
+    const region = await Region.findByPk(region_id);
+    if (!region) {
+      return res.status(400).json({ message: 'Región no encontrada' });
     }
 
-    // Verifica si el nuevo RUT ya está en uso por otro usuario
-    if (rut && rut !== user.rut) {
-      const existingUserWithRut = await User.findOne({ where: { rut } });
-      if (existingUserWithRut) {
-        return res.status(400).json({ message: 'El RUT ya está registrado' });
-      }
-    }
-
-    // Verifica que la comuna esté asociada a la región
+    // Verifica si el commune_id es válido para la región
     if (commune_id) {
-      const commune = await Commune.findByPk(commune_id);
-      if (!commune || commune.region_id !== region_id) {
+      const commune = await Commune.findOne({
+        where: {
+          commune_id: commune_id,
+          region_id: region_id
+        }
+      });
+      if (!commune) {
         return res.status(400).json({ message: 'La comuna no está asociada a la región seleccionada' });
       }
     }
 
-    // Actualiza los datos del usuario
+    // Actualiza el usuario
     await user.update({
       first_name,
       second_name,
@@ -358,14 +352,12 @@ export const updateMyProfile = async (req, res) => {
       second_last_name,
       email,
       phone_number,
-      sales_channel_id,
-      company_id,
       region_id,
       commune_id,
       street,
       number,
       department_office_floor,
-      rut // Actualiza el RUT si se proporciona uno nuevo
+      rut
     });
 
     res.status(200).json({ message: 'Perfil actualizado con éxito', user });

@@ -27,27 +27,18 @@ export const login = async (req, res) => {
       attributes: ['role_id', 'role_name']
     });
 
-    if (user.must_change_password === 1) {
-      const token = jwt.sign({ user_id: user.user_id, role_id: user.role_id }, process.env.SECRET_KEY, { expiresIn: '1h' });
-      return res.status(200).json({
-        message: 'Login exitoso',
-        token,
-        user: {
-          first_name: user.first_name,
-          status: user.status,
-        },
-      });
-    }
-
-    const token = jwt.sign({ user_id: user.user_id, role_id: user.role_id }, process.env.SECRET_KEY, { expiresIn: '1h' });
+    const token = jwt.sign({
+      user_id: user.user_id,
+      role_id: user.role_id,
+      must_change_password: user.must_change_password,
+      status: user.status,
+    }, process.env.SECRET_KEY, { expiresIn: '1h' });
 
     res.status(200).json({
       message: 'Login exitoso',
       token,
       user: {
         first_name: user.first_name,
-        must_change_password: user.must_change_password,
-        status: user.status,
       },
     });
   } catch (err) {
