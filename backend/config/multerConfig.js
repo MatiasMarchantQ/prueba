@@ -1,30 +1,39 @@
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 
-// Configuración de almacenamiento para multer
 const storage = multer.diskStorage({
-  destination(req, file, cb) {
-    cb(null, 'uploads/'); // Carpeta donde se guardarán los archivos
+  destination: function (req, file, cb) {
+    const uploadPath = 'uploads/';
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
   },
-  filename(req, file, cb) {
-    const ext = path.extname(file.originalname);
-    const fileName = `${Date.now()}_${file.originalname}`;
-    cb(null, fileName);
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
   }
 });
 
-// Configuración de multer
-const upload = multer({
-  storage,
-  limits: {
-    fileSize: 2 * 1024 * 1024 // Limitar a 2MB por archivo
-  },
-  fileFilter(req, file, cb) {
-    if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
-      return cb(new Error('Please upload an image in JPG or PNG format'));
-    }
-    cb(undefined, true);
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Not an image! Please upload only images.'), false);
   }
-});
+};
+
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  }
+}).fields([
+  { name: 'id_card_image', maxCount: 1 },
+  { name: 'simple_power_image', maxCount: 1 },
+  { name: 'house_image', maxCount: 1 }
+]);
 
 export default upload;

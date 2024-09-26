@@ -15,12 +15,11 @@ router.get('/all/search', authenticate, isAnyRole(['SuperAdmin', 'Administrador'
 // get por id
 router.get('/:sale_id', authenticate, isAnyRole(['SuperAdmin', 'Administrador', 'Validador', 'Ejecutivo','Despachador']), getSaleById);
 
-
 //put
 router.put('/update/:sale_id', authenticate, isAnyRole(['SuperAdmin', 'Administrador', 'Validador', 'Despachador']), updateSale);
 router.put('/update/executive/:sale_id',authenticate, isAnyRole(['Ejecutivo','SuperAdmin', 'Administrador']), updateSaleByExecutive);
 
 //post
-router.post('/create', authenticate, isAnyRole(['Ejecutivo','SuperAdmin','Administrador']), upload.array('id_card_image', 3), createSale);
+router.post('/create', authenticate, isAnyRole(['Ejecutivo','SuperAdmin','Administrador']), upload, createSale);
 
 export default router;

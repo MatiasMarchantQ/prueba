@@ -92,14 +92,16 @@ const Sales = sequelize.define('Sales', {
     type: DataTypes.TEXT
   },
   id_card_image: {
-    type: DataTypes.JSON,
+    type: DataTypes.STRING(255),
     allowNull: true,
   },
   simple_power_image: {
-    type: DataTypes.STRING(255)
+    type: DataTypes.STRING(255),
+    allowNull: true,
   },
   house_image: {
-    type: DataTypes.STRING(255)
+    type: DataTypes.STRING(255),
+    allowNull: true,
   },
   sale_status_id: {
     type: DataTypes.INTEGER(11),

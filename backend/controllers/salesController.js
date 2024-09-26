@@ -18,60 +18,175 @@ import { Op } from 'sequelize';
 import { Sequelize, DataTypes } from 'sequelize';
 import { sendEmailNotification } from '../services/emailService.js';
 
-const handleFileRenaming = (files, clientRut) => {
-  if (files.length > 3) throw new Error('You can upload up to 3 images.');
-
-  return files
-    .slice(0, 3) // Limitar a 3 imágenes
-    .filter(file => file && file.path) // Asegúrate de que file.path esté disponible
-    .map(file => {
-      const ext = path.extname(file.originalname);
-      const newFileName = `${clientRut}_${Date.now()}${ext}`;
-      const newFilePath = path.join(path.dirname(file.path), newFileName);
-      fs.renameSync(file.path, newFilePath);
-      return {
-        filename: newFileName,
-        path: newFilePath
-      };
-    });
-};
-
 const validateInputs = async (reqBody) => {
   const { region_id, commune_id, promotion_id, sale_status_id, sale_status_reason_id } = reqBody;
 
-  const region = await fetchRegionById(region_id);
-  if (!region) throw new Error('La región seleccionada no existe');
+  // Asegurarse de que sale_status_id sea un número
+  const numericSaleStatusId = Number(sale_status_id);
 
-  const commune = await Commune.findOne({ where: { commune_id, region_id } });
-  if (!commune) throw new Error('La comuna seleccionada no existe o no está asociada a la región');
+  if (isNaN(numericSaleStatusId)) {
+    throw new Error('sale_status_id debe ser un número válido');
+  }
 
-  const promotion = await Promotion.findByPk(promotion_id);
-  if (!promotion) throw new Error('La promoción seleccionada no existe');
+  // Validación corregida para sale_status_id y sale_status_reason_id
+  if (numericSaleStatusId !== 1) {
+    if (!sale_status_reason_id) {
+      throw new Error('El motivo de estado de venta es requerido para estados de venta diferentes a 1');
+    }
+    const saleStatusReason = await SaleStatusReason.findOne({
+      where: {
+        sale_status_id: numericSaleStatusId,
+        sale_status_reason_id,
+      },
+    });
+    if (!saleStatusReason) {
+      throw new Error('El motivo de estado de venta no está asociado al estado de venta');
+    }
+  } else if (sale_status_reason_id) {
+    throw new Error('No se debe proporcionar un motivo de estado de venta para el estado 1');
+  }
 
-  const saleStatus = await SaleStatus.findByPk(sale_status_id);
-  if (!saleStatus) throw new Error('El estado de venta seleccionado no existe');
-
-  const saleStatusReason = await SaleStatusReason.findOne({
+  // Resto de las validaciones...
+  const promotion = await Promotion.findOne({
     where: {
-      sale_status_id,
-      sale_status_reason_id,
+      promotion_id: promotion_id,
     },
   });
-  if (!saleStatusReason) throw new Error('El motivo de estado de venta no está asociado al estado de venta');
+  console.log(promotion);
+  if (!promotion) {
+    throw new Error('Promoción no encontrada');
+  }
 
-  return promotion;
+  const saleStatus = await SaleStatus.findOne({
+    where: {
+      sale_status_id: numericSaleStatusId,
+    },
+  });
+  if (!saleStatus) {
+    throw new Error('Estado de venta no encontrado');
+  }
+
+  const region = await fetchRegionById(region_id);
+  if (!region) {
+    throw new Error('Región no encontrada');
+  }
+
+  const commune = await Commune.findOne({
+    where: {
+      commune_id: commune_id,
+    },
+  });
+  if (!commune) {
+    throw new Error('Comuna no encontrada');
+  }
+
+  return promotion.dataValues;
 };
 
-const createSaleData = (reqBody, idCardImages, currentUser, installationAmountId, companyPriorityId) => {
-  const { service_id, entry_date, client_first_name, client_last_name, client_rut, client_email, client_phone, client_secondary_phone, region_id, commune_id, street, number, department_office_floor, geo_reference, promotion_id, additional_comments } = reqBody;
+export const createSale = async (req, res) => {
+  try {
+    // Normalize the request body
+    const reqBody = Object.keys(req.body).reduce((acc, key) => {
+      acc[key.trim()] = req.body[key];
+      return acc;
+    }, {});
 
-  const idCardImagePaths = idCardImages.map((image) => image.path);
-  const saleStatusId = reqBody.sale_status_id;
-  const saleStatusReasonId = saleStatusId === 1 ? null : reqBody.sale_status_reason_id || null;
+    const files = req.files;
+    if (!files || Object.keys(files).length === 0) {
+      return res.status(400).json({ message: 'No files provided' });
+    }
+
+    // Handle file renaming for each image type
+    const idCardImages = handleFileRenaming(files.id_card_image, reqBody.client_rut);
+    const simplePowerImage = handleFileRenaming(files.simple_power_image, reqBody.client_rut);
+    const houseImage = handleFileRenaming(files.house_image, reqBody.client_rut);
+
+    if (idCardImages.length === 0) {
+      return res.status(400).json({ message: 'No valid id card images provided' });
+    }
+
+    // Validate inputs
+    const promotion = await validateInputs(reqBody);
+    
+    // Get current user information
+    const currentUser = await User.findByPk(req.user.user_id);
+    if (!currentUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Get company priority
+    const companyPriority = await CompanyPriority.findOne({ 
+      where: { company_id: currentUser.company_id }, 
+      order: [['priority_level', 'ASC']] 
+    });
+    if (!companyPriority) {
+      return res.status(404).json({ message: 'Company priority not found' });
+    }
+
+    // Check for existing RUT and email
+    const existingRut = await Sales.findOne({ where: { client_rut: reqBody.client_rut } });
+    if (existingRut) {
+      return res.status(400).json({ message: 'RUT already exists in the database' });
+    }
+
+    const existingEmail = await Sales.findOne({ where: { client_email: reqBody.client_email } });
+    if (existingEmail) {
+      return res.status(400).json({ message: 'Email already exists in the database' });
+    }
+
+    // Create sale data
+    const saleData = createSaleData(reqBody, idCardImages, simplePowerImage, houseImage, currentUser, promotion?.dataValues?.installation_amount_id, companyPriority.priority_level);
+    const sale = await Sales.create(saleData);
+
+    // Send email notification if the sale is in initial status
+    if (saleData.sale_status_id === 1) {
+      await sendEmailNotification(sale, currentUser, reqBody, idCardImages);
+    }
+
+    res.status(201).json(sale);
+  } catch (error) {
+    console.error('Error details:', error);
+    res.status(500).json({ message: 'Error creating sale', error: error.message });
+  }
+};
+
+const handleFileRenaming = (files, clientRut) => {
+  // Si el archivo no es un array, lo convertimos en uno
+  if (!Array.isArray(files)) {
+    files = [files];
+  }
+
+  if (!files) return [];
+
+  try {
+    const newFiles = files.map((file) => {
+      const ext = path.extname(file.originalname);
+      const newFileName = `${clientRut}_${Date.now()}${ext}`;
+      const filePath = path.posix.join('uploads', newFileName);
+
+      // Renombrar y mover el archivo
+      fs.renameSync(file.path, filePath);
+
+      // Normalizar la ruta para asegurar compatibilidad
+      const normalizedFilePath = filePath.replace(/\\/g, '/');
+
+      return normalizedFilePath;
+    });
+    return newFiles;
+  } catch (error) {
+    console.error(`Error subiendo archivo: ${error}`);
+    return [];
+  }
+};
+
+
+
+
+const createSaleData = (reqBody, idCardImages, simplePowerImage, houseImage, currentUser, installationAmountId, companyPriorityId) => {
+  const { service_id, entry_date, client_first_name, client_last_name, client_rut, client_email, client_phone, client_secondary_phone, region_id, commune_id, street, number, department_office_floor, geo_reference, promotion_id, additional_comments } = reqBody;
 
   return {
     service_id: service_id || null,
-    entry_date,
     sales_channel_id: 1,
     client_first_name,
     client_last_name,
@@ -88,9 +203,11 @@ const createSaleData = (reqBody, idCardImages, currentUser, installationAmountId
     promotion_id,
     installation_amount_id: installationAmountId,
     additional_comments: additional_comments || null,
-    id_card_image: idCardImagePaths.join(','),
-    sale_status_id: 1,
-    sale_status_reason_id: saleStatusReasonId,
+    id_card_image: idCardImages[0],
+    simple_power_image: simplePowerImage[0],
+    house_image: houseImage[0],
+    sale_status_id: 1, // Siempre establecer en 1 para nuevas ventas
+    sale_status_reason_id: null, // Siempre establecer en null para nuevas ventas
     executive_id: currentUser.role_id === 3 ? currentUser.user_id : null,
     validator_id: null,
     dispatcher_id: null,
@@ -99,72 +216,6 @@ const createSaleData = (reqBody, idCardImages, currentUser, installationAmountId
     modified_by_user_id: currentUser.user_id
   };
 };
-
-export const createSale = async (req, res) => {
-  try {
-    // Normalizar el cuerpo de la solicitud
-    const reqBody = Object.keys(req.body).reduce((acc, key) => {
-      acc[key.trim()] = req.body[key];
-      return acc;
-    }, {});
-
-    const files = req.files;
-    if (!files || files.length === 0) {
-      return res.status(400).json({ message: 'No files provided' });
-    }
-
-    const idCardImages = handleFileRenaming(files, reqBody.client_rut);
-    if (idCardImages.length === 0) {
-      return res.status(400).json({ message: 'No valid id card images provided' });
-    }
-
-    // Validar entradas
-    const promotion = await validateInputs(reqBody);
-    
-    // Obtener información del usuario actual
-    const currentUser = await User.findByPk(req.user.user_id);
-    if (!currentUser) {
-      return res.status(404).json({ message: 'Usuario no encontrado' });
-    }
-
-    // Obtener prioridad de la compañía
-    const companyPriority = await CompanyPriority.findOne({ 
-      where: { company_id: currentUser.company_id }, 
-      order: [['priority_level', 'ASC']] 
-    });
-    if (!companyPriority) {
-      return res.status(404).json({ message: 'No se encontró la prioridad de la compañía' });
-    }
-
-    // Verificar existencia del RUT y email
-    const existingRut = await Sales.findOne({ where: { client_rut: reqBody.client_rut } });
-    if (existingRut) {
-      return res.status(400).json({ message: 'El RUT ya existe en la base de datos' });
-    }
-
-    const existingEmail = await Sales.findOne({ where: { client_email: reqBody.client_email } });
-    if (existingEmail) {
-      return res.status(400).json({ message: 'El email ya existe en la base de datos' });
-    }
-
-    // Crear los datos de la venta
-    const saleData = createSaleData(reqBody, idCardImages, currentUser, promotion.installation_amount_id, companyPriority.priority_level);
-    const sale = await Sales.create(saleData);
-
-    // Enviar notificación por correo si la venta se encuentra en estado inicial
-    if (saleData.sale_status_id === 1) {
-      await sendEmailNotification(sale, currentUser, reqBody, idCardImages);
-    }
-
-    res.status(201).json(sale);
-  } catch (error) {
-    console.error('Error details:', error);
-    res.status(500).json({ message: 'Error creating sale', error: error.message });
-  }
-};
-
-
-
 
 export const getSales = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -380,6 +431,38 @@ export const getSaleById = async (req, res) => {
           ],
         },
       ],
+      attributes: [
+        'sale_id',
+        'service_id',
+        'sales_channel_id',
+        'client_first_name',
+        'client_last_name',
+        'client_rut',
+        'client_email',
+        'client_phone',
+        'client_secondary_phone',
+        'region_id',
+        'commune_id',
+        'street',
+        'number',
+        'department_office_floor',
+        'geo_reference',
+        'promotion_id',
+        'installation_amount_id',
+        'additional_comments',
+        'id_card_image',
+        'simple_power_image',
+        'house_image',
+        'sale_status_id',
+        'sale_status_reason_id',
+        'executive_id',
+        'validator_id',
+        'dispatcher_id',
+        'company_id',
+        'company_priority_id',
+        'modified_by_user_id',
+        'created_at',
+      ],
     };
 
     const sale = await Sales.findOne(options);
@@ -387,24 +470,26 @@ export const getSaleById = async (req, res) => {
       return res.status(404).json({ message: 'Venta no encontrada' });
     }
 
-    const idCardImagePaths = sale.id_card_image.split(',');
-    const idCardImages = idCardImagePaths.map((path) => {
-      return {
-        url: `${req.protocol}://${req.get('host')}${path}`,
-        label: path.split('/').pop(),
-      };
-    });
+    // Función para procesar las rutas de imágenes
+    const processImagePaths = (imagePath) => {
+      if (!imagePath) return null;
+      // Reemplazar las barras invertidas y eliminar comillas adicionales
+      const cleanedPath = imagePath.replace(/\\/g, '/').replace(/"/g, '');
+      return `${req.protocol}://${req.get('host')}/${cleanedPath}`;
+    };
 
-    sale.id_card_image_links = idCardImages;
+    // Aplicar la normalización a las rutas de imágenes
+    sale.dataValues.id_card_image_url = processImagePaths(sale.id_card_image);
+    sale.dataValues.simple_power_image_url = processImagePaths(sale.simple_power_image);
+    sale.dataValues.house_image_url = processImagePaths(sale.house_image);
 
+    // Enviar la respuesta con las URLs normalizadas
     res.json(sale);
   } catch (error) {
-    console.error('Error details:', error);
-    res.status(500).json({ message: 'Error obteniendo venta', error: error.message });
+    console.error('Error al obtener la venta:', error);
+    res.status(500).json({ message: 'Error interno del servidor', error: error.message });
   }
 };
-
-
 
 export const getPromotionsByCommune = async (req, res) => {
   const communeId = req.params.commune_id;

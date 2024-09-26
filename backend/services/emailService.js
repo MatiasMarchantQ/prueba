@@ -1,14 +1,8 @@
 import nodemailer from 'nodemailer';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
 import SalesChannel from '../models/SalesChannels.js';
 import Commune from '../models/Communes.js';
 import Promotion from '../models/Promotions.js';
 import InstallationAmount from '../models/InstallationAmounts.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Configuración del transportador de nodemailer
 const transporter = nodemailer.createTransport({
@@ -22,7 +16,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // Función para enviar la notificación por correo con imágenes adjuntas
-export const sendEmailNotification = async (sale, currentUser, reqBody, files) => {
+export const sendEmailNotification = async (sale, currentUser, reqBody) => {
   const salesChannel = await SalesChannel.findOne({ where: { sales_channel_id: 1 } });
   const commune = await Commune.findOne({ where: { commune_id: sale.commune_id } });
   const promotion = await Promotion.findOne({ where: { promotion_id: sale.promotion_id } });
@@ -54,19 +48,12 @@ export const sendEmailNotification = async (sale, currentUser, reqBody, files) =
     <p>El equipo de ventas</p>
   `;
 
-  // Adjuntar las imágenes de la cédula
-  const attachments = files.map(file => ({
-    filename: file.filename,
-    path: file.path
-  }));
-
   // Enviar el correo electrónico
   transporter.sendMail({
     from: process.env.EMAIL_USER,
     to: 'internetsolicitudes@gmail.com',
     subject,
-    html: message,
-    attachments
+    html: message
   }, (error, info) => {
     if (error) {
       console.error(error);
