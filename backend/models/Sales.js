@@ -12,10 +12,6 @@ const Sales = sequelize.define('Sales', {
     type: DataTypes.STRING(50),
     allowNull: true,
   },
-  entry_date: {
-    type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW,
-  },
   sales_channel_id: {
     type: DataTypes.INTEGER(11),
     allowNull: false,
@@ -103,6 +99,23 @@ const Sales = sequelize.define('Sales', {
     type: DataTypes.STRING(255),
     allowNull: true,
   },
+  other_images: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  is_priority: {
+    type: DataTypes.INTEGER(1),
+    allowNull: false,
+    defaultValue: 0,
+  },
+  priority_modified_by_user_id: {
+    type: DataTypes.INTEGER(11),
+    allowNull: true,
+    references: {
+      model: 'User',
+      key: 'user_id',
+    },
+  },
   sale_status_id: {
     type: DataTypes.INTEGER(11),
     references: {
@@ -116,6 +129,20 @@ const Sales = sequelize.define('Sales', {
     references: {
       model: 'SaleStatusReason',
       key: 'sale_status_reason_id',
+    },
+  },
+  superadmin_id: {
+    type: DataTypes.INTEGER(11),
+    references: {
+      model: 'User',
+      key: 'user_id',
+    },
+  },
+  admin_id: {
+    type: DataTypes.INTEGER(11),
+    references: {
+      model: 'User',
+      key: 'user_id',
     },
   },
   executive_id: {
@@ -177,40 +204,100 @@ const Sales = sequelize.define('Sales', {
     afterCreate: async (sale, options) => {
       await SaleHistory.create({
         sale_id: sale.sale_id,
-        new_status_id: sale.sale_status_id, // El estado inicial
-        modified_by_user_id: sale.modified_by_user_id // Asume que sale tiene user_id, si no ajusta de acuerdo a tu lógica
+        new_status_id: sale.sale_status_id,
+        sale_status_reason_id: sale.sale_status_reason_id,
+        modified_by_user_id: sale.modified_by_user_id,
+        modification_date: new Date(),
       });
+  
+      // Verifica si el estado es 'Ingresado' (sale_status_id = 1)
+      if (sale.sale_status_id === 1) {
+        await SaleHistory.create({
+          sale_id: sale.sale_id,
+          date_type: 'Ingresado',
+          date: new Date(),
+        });
+      }
     },
-
+  
     afterUpdate: async (sale, options) => {
       const lastHistory = await SaleHistory.findOne({
         where: { sale_id: sale.sale_id },
-        order: [['modification_date', 'DESC']] // Busca el último registro de historial
+        order: [['modification_date', 'DESC']],
       });
-
-      if (lastHistory) {
-        // Crea un nuevo registro en el historial con el estado actual
+  
+      // Check if is_priority was updated
+      const priorityChanged = sale.changed('is_priority');
+      const statusChanged = sale.changed('sale_status_id');
+  
+      if (priorityChanged && !statusChanged) {
+        // Case 1: Priority changed, but sale status didn't
         await SaleHistory.create({
           sale_id: sale.sale_id,
-          previous_status_id: lastHistory.new_status_id, // El estado anterior
-          new_status_id: sale.sale_status_id, // El nuevo estado
-          modified_by_user_id: sale.modified_by_user_id, // El usuario que modifica la venta
-          modification_date: new Date() // La fecha y hora actual
-        });
-      } else {
-        // Si no hay historial previo, se crea el primer registro
-        await SaleHistory.create({
-          sale_id: sale.sale_id,
-          previous_status_id: null, // Sin estado anterior
-          new_status_id: sale.sale_status_id, // El nuevo estado
-          modified_by_user_id: sale.modified_by_user_id, // El usuario que modifica la venta
-          modification_date: new Date() // La fecha y hora actual
+          previous_status_id: lastHistory ? lastHistory.new_status_id : null,
+          new_status_id: sale.sale_status_id, // replicate current status
+          sale_status_reason_id: sale.sale_status_reason_id,
+          modified_by_user_id: sale.modified_by_user_id,
+          modification_date: new Date(),
+          priority_modified_by_user_id: sale.priority_modified_by_user_id,
         });
       }
-    }
+  
+      if (statusChanged && priorityChanged) {
+        // Case 2: Both sale_status_id and is_priority updated
+        await SaleHistory.create({
+          sale_id: sale.sale_id,
+          previous_status_id: lastHistory ? lastHistory.new_status_id : null,
+          new_status_id: sale.sale_status_id,
+          sale_status_reason_id: sale.sale_status_reason_id,
+          modified_by_user_id: sale.modified_by_user_id,
+          modification_date: new Date(),
+          priority_modified_by_user_id: sale.priority_modified_by_user_id, // Capture priority change as well
+        });
+      }
+  
+      if (statusChanged && !priorityChanged) {
+        // Case 3: Only sale_status_id updated
+        await SaleHistory.create({
+          sale_id: sale.sale_id,
+          previous_status_id: lastHistory ? lastHistory.new_status_id : null,
+          new_status_id: sale.sale_status_id,
+          sale_status_reason_id: sale.sale_status_reason_id,
+          modified_by_user_id: sale.modified_by_user_id,
+          modification_date: new Date(),
+        });
+      }
+  
+      // (Validado, Anulado)
+      if (sale.sale_status_id === 2) {
+        await SaleHistory.create({
+          sale_id: sale.sale_id,
+          date_type: 'Validado',
+          date: new Date(),
+        });
+      } else if (sale.sale_status_id === 7) {
+        await SaleHistory.create({
+          sale_id: sale.sale_id,
+          date_type: 'Anulado',
+          date: new Date(),
+        });
+      }
+  
+      // Register priority change event if applicable
+      if (sale.is_priority === 1) {
+        await SaleHistory.create({
+          sale_id: sale.sale_id,
+          date_type: 'Prioridad',
+          date: new Date(),
+          priority_modified_by_user_id: sale.priority_modified_by_user_id,
+        });
+      }
+    },
   },
   tableName: 'sales',
-  timestamps: false,
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   indexes: [
     {
       name: 'idx_service_id',

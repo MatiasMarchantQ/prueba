@@ -92,7 +92,6 @@ export const getUserById = async (req, res) => {
         'second_last_name',
         'rut',
         'email',
-        'password',
         'phone_number',
         'sales_channel_id',
         'company_id',
@@ -470,13 +469,14 @@ export const updateUserByAdmin = async (req, res) => {
         }
       }
 
-      if (req.body.password) {
+      if (req.body.password && req.body.password !== '') {
+        if (req.body.password.length < 8) {
+          return res.status(400).json({ message: 'La contraseña debe tener al menos 8 caracteres' });
+        }
         const hashedPassword = await bcrypt.hash(req.body.password, 10);
         updates.password = hashedPassword;
       }
-    }
-
-    if (currentUserRoleId === 2) { // Administrador
+    } else if (currentUserRoleId === 2) { // Administrador
       if (userToUpdate.company_id !== req.user.company_id) {
         return res.status(403).json({ message: 'No tienes permisos para actualizar este usuario' });
       }
@@ -498,7 +498,7 @@ export const updateUserByAdmin = async (req, res) => {
       if (updates.commune_id) {
         const commune = await Commune.findByPk(updates.commune_id);
         if (!commune || commune.region_id !== updates.region_id) {
-          return res.status(400).json({ message: 'La comuna no está asociada a la región seleccionada' });
+          return res.status(400).json({ message: 'La comuna no está asociada a la reg ión seleccionada' });
         }
       }
 
@@ -508,15 +508,18 @@ export const updateUserByAdmin = async (req, res) => {
       }
     }
 
-    await userToUpdate.update(updates);
-
-    return res.status(200).json({ message: 'Usuario actualizado con éxito', user: userToUpdate });
+    try {
+      await userToUpdate.update(updates);
+      return res.status(200).json({ message: 'Usuario actualizado con éxito', user: userToUpdate });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Error del servidor al actualizar usuario' });
+    }
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error del servidor al actualizar usuario' });
   }
 };
-
 
 export default {
   getAllUsers,

@@ -17,6 +17,10 @@ const SaleStatusReason = sequelize.define('SaleStatusReason', {
       key: 'sale_status_id',
     },
   },
+  has_reason: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
+  },
   created_at: {
     type: DataTypes.DATE,
     allowNull: true,

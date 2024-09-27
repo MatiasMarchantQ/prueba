@@ -27,13 +27,8 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
-  }
-}).fields([
-  { name: 'id_card_image', maxCount: 1 },
-  { name: 'simple_power_image', maxCount: 1 },
-  { name: 'house_image', maxCount: 1 }
-]);
+  limits: { fileSize: 5 * 1024 * 1024 }, // Limite de 5MB
+}).fields([{ name: 'other_images', maxCount: 5 }]);
+
 
 export default upload;

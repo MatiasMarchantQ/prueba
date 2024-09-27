@@ -20,8 +20,12 @@ const SaleHistory = sequelize.define('SaleHistory', {
   new_status_id: {
     type: DataTypes.INTEGER(11)
   },
-  reason: {
-    type: DataTypes.TEXT
+  sale_status_reason_id: {
+    type: DataTypes.INTEGER(11),
+    references: {
+      model: 'SaleStatusReason',
+      key: 'sale_status_reason_id',
+    },
   },
   modified_by_user_id: {
     type: DataTypes.INTEGER(11),
@@ -34,7 +38,18 @@ const SaleHistory = sequelize.define('SaleHistory', {
   modification_date: {
     type: DataTypes.DATE,
     defaultValue: sequelize.literal('CURRENT_TIMESTAMP')
-  }
+  },
+  is_priority: {
+    type: DataTypes.INTEGER(1),
+    allowNull: false,
+    defaultValue: 0,
+  },
+  date_type: {
+    type: DataTypes.ENUM('Prioridad', 'Validado', 'Activo'),
+  },
+  date: {
+    type: DataTypes.DATE,
+  },
 }, {
   tableName: 'salehistories',
   timestamps: false,

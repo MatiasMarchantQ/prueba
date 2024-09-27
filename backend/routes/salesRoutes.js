@@ -1,7 +1,7 @@
 import express from 'express';
 const router = express.Router();
 import upload from '../config/multerConfig.js';
-import { createSale, getSales, getSaleById, getSalesBySearch, updateSale, updateSaleByExecutive, getPromotionsByCommune, getInstallationAmountsByPromotion } from '../controllers/salesController.js';
+import { createSale, getSales, getSaleById, getSalesBySearch, updateSale, getPromotionsByCommune, getInstallationAmountsByPromotion } from '../controllers/salesController.js';
 import { authenticate, isAnyRole } from '../middlewares/authMiddleware.js';
 
 //get
@@ -15,9 +15,8 @@ router.get('/all/search', authenticate, isAnyRole(['SuperAdmin', 'Administrador'
 // get por id
 router.get('/:sale_id', authenticate, isAnyRole(['SuperAdmin', 'Administrador', 'Validador', 'Ejecutivo','Despachador']), getSaleById);
 
-//put
-router.put('/update/:sale_id', authenticate, isAnyRole(['SuperAdmin', 'Administrador', 'Validador', 'Despachador']), updateSale);
-router.put('/update/executive/:sale_id',authenticate, isAnyRole(['Ejecutivo','SuperAdmin', 'Administrador']), updateSaleByExecutive);
+//patch
+router.put('/update/:sale_id', authenticate, isAnyRole(['SuperAdmin', 'Administrador', 'Ejecutivo', 'Validador', 'Despachador']), upload, updateSale);
 
 //post
 router.post('/create', authenticate, isAnyRole(['Ejecutivo','SuperAdmin','Administrador']), upload, createSale);
