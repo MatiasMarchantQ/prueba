@@ -11,17 +11,9 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  second_name: {
-    type: DataTypes.STRING,
-    allowNull: true,
-  },
   last_name: {
     type: DataTypes.STRING,
     allowNull: false,
-  },
-  second_last_name: {
-    type: DataTypes.STRING,
-    allowNull: true,
   },
   rut: {
     type: DataTypes.STRING,

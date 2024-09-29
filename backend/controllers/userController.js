@@ -20,17 +20,30 @@ export const getUsersWithRoles = async (req, res) => {
 };
 
 export const getAllUsers = async (req, res) => {
-  const { page = 1, limit = 18 } = req.query;
+  const { 
+    page = 1, 
+    limit = 18, 
+    company_id,
+    sales_channel_id,
+    role_id,
+    status
+  } = req.query;
+
   try {
+    const whereClause = {};
+    if (company_id) whereClause.company_id = company_id;
+    if (sales_channel_id) whereClause.sales_channel_id = sales_channel_id;
+    if (role_id) whereClause.role_id = role_id;
+    if (status) whereClause.status = status;
+
     const users = await User.findAll({
+      where: whereClause,
       offset: (page - 1) * limit,
       limit: parseInt(limit),
       attributes: [
         'user_id',
         'first_name',
-        'second_name',
         'last_name',
-        'second_last_name',
         'rut',
         'email',
         'password',
@@ -72,7 +85,17 @@ export const getAllUsers = async (req, res) => {
         }
       ]
     });
-    res.status(200).json({ message: 'Users found', users });
+
+    const totalUsers = await User.count({ where: whereClause });
+    const totalPages = Math.ceil(totalUsers / limit);
+
+    res.status(200).json({ 
+      message: 'Users found', 
+      users,
+      currentPage: parseInt(page),
+      totalPages,
+      totalUsers
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
@@ -87,9 +110,7 @@ export const getUserById = async (req, res) => {
       attributes: [
         'user_id',
         'first_name',
-        'second_name',
         'last_name',
-        'second_last_name',
         'rut',
         'email',
         'phone_number',
@@ -171,9 +192,7 @@ export const register = async (req, res) => {
   try {
     const {
       first_name,
-      second_name,
       last_name,
-      second_last_name,
       rut,
       email,
       password,
@@ -212,9 +231,7 @@ export const register = async (req, res) => {
 
     const newUser = await User.create({
       first_name,
-      second_name,
       last_name,
-      second_last_name,
       rut,
       email,
       password: hashedPassword,
@@ -247,9 +264,7 @@ export const registerUserByAdmin = async (req, res) => {
 
     const {
       first_name,
-      second_name,
       last_name,
-      second_last_name,
       rut,
       email,
       password,
@@ -290,9 +305,7 @@ export const registerUserByAdmin = async (req, res) => {
 
     const newUserData = {
       first_name,
-      second_name,
       last_name,
-      second_last_name,
       rut,
       email,
       password: hashedPassword,
@@ -320,7 +333,7 @@ export const registerUserByAdmin = async (req, res) => {
 export const updateMyProfile = async (req, res) => {
   try {
     const userId = req.user.user_id;
-    const { first_name, second_name, last_name, second_last_name, email, phone_number, region_id, commune_id, street, number, department_office_floor, rut } = req.body;
+    const { first_name, last_name, email, phone_number, region_id, commune_id, street, number, department_office_floor, rut } = req.body;
 
     // Busca el usuario por ID
     const user = await User.findByPk(userId);
@@ -351,9 +364,7 @@ export const updateMyProfile = async (req, res) => {
     // Actualiza el usuario
     await user.update({
       first_name,
-      second_name,
       last_name,
-      second_last_name,
       email,
       phone_number,
       region_id,
@@ -418,9 +429,7 @@ export const updateUserByAdmin = async (req, res) => {
     const updates = {};
 
     if (req.body.first_name) updates.first_name = req.body.first_name;
-    if (req.body.second_name) updates.second_name = req.body.second_name;
     if (req.body.last_name) updates.last_name = req.body.last_name;
-    if (req.body.second_last_name) updates.second_last_name = req.body.second_last_name;
     if (req.body.email) updates.email = req.body.email;
     if (req.body.phone_number) updates.phone_number = req.body.phone_number;
     if (req.body.sales_channel_id) updates.sales_channel_id = req.body.sales_channel_id;

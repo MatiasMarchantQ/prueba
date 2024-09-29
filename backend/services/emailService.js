@@ -23,7 +23,7 @@ export const sendEmailNotification = async (sale, currentUser, reqBody) => {
   const installationAmount = await InstallationAmount.findOne({ where: { installation_amount_id: promotion.installation_amount_id } });
 
   const executiveName = currentUser ? `${currentUser.first_name} ${currentUser.last_name}` : 'Ejecutivo no asignado';
-  const subject = `${reqBody.client_last_name}, ${reqBody.client_first_name} - ${executiveName} - ${commune ? commune.commune_name : 'Comuna no disponible'} - ${salesChannel ? salesChannel.channel_name : 'Canal no disponible'}`;
+  const subject = `${reqBody.client_first_name} ${reqBody.client_last_name} - ${executiveName} - ${commune ? commune.commune_name : 'Comuna no disponible'} - ${salesChannel ? salesChannel.channel_name : 'Canal no disponible'}`;
   const formattedDate = new Date(sale.created_at).toLocaleString('es-CL', { timeZone: 'America/Santiago' });
 
   const message = `

@@ -8,13 +8,13 @@ const router = Router();
 router.get('/', authenticate, getPromotions);
 
 //Devuelve la cantidad de instalaciones por una promocion especifica
-router.get('/installation-amounts', getInstallationAmounts);
+router.get('/installation-amounts', authenticate, getInstallationAmounts);
 
 
 
 //Actualiza el monto de instalacion para una promocion especifica. El :promotionId es la promo a actualizar
 //LISTO
-router.patch('/promotions/:promotionId/installation-amount', updateInstallationAmountForPromotion);
+router.patch('/promotions/:promotionId/installation-amount', authenticate, updateInstallationAmountForPromotion);
 
 //Crea nuevas promociones
 //LISTO
@@ -22,13 +22,13 @@ router.post('/', authenticate, addPromotionWithInstallationAmount);
 
 //Asigna promociones a una comuna especifica. El :communeId es la comuna a la que se le asignara la o las promociones
 //LISTO
-router.post('/communes/:communeId/promotions', assignPromotionsToCommune);
+router.post('/communes/:communeId/promotions', authenticate , assignPromotionsToCommune);
 
 //Actualiza una promocion existente
 //LISTO
-router.patch('/:promotionId', editPromotion);
+router.patch('/:promotionId', authenticate, editPromotion);
 
 // Deshabilitar promociones por comuna
-router.patch('/communes/:communeId/promotions/disable', disablePromotionsForCommune);
+router.patch('/communes/:communeId/promotions/disable', authenticate, disablePromotionsForCommune);
 
 export default router;

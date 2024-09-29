@@ -1,6 +1,7 @@
 import express from 'express';
 const router = express.Router();
 import upload from '../config/multerConfig.js';
+import { exportSales } from '../controllers/exportController.js';
 import { createSale, getSales, getSaleById, getSalesBySearch, updateSale, getPromotionsByCommune, getInstallationAmountsByPromotion } from '../controllers/salesController.js';
 import { authenticate, isAnyRole } from '../middlewares/authMiddleware.js';
 
@@ -20,5 +21,11 @@ router.put('/update/:sale_id', authenticate, isAnyRole(['SuperAdmin', 'Administr
 
 //post
 router.post('/create', authenticate, isAnyRole(['Ejecutivo','SuperAdmin','Administrador']), upload, createSale);
+
+// Ruta para exportar ventas
+router.get('/export', authenticate, isAnyRole(['SuperAdmin', 'Administrador', 'Validador', 'Ejecutivo', 'Despachador']), (req, res) => {
+    const format = req.query.format; // Obtener el formato de la consulta
+    exportSales(req, res, format);
+  });
 
 export default router;

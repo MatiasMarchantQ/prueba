@@ -108,7 +108,7 @@ export const createSale = async (req, res) => {
     // Validate inputs
     const { promotion, installationAmountId } = await validateInputs(reqBody);
     
-    // Get current user information
+ 
     // Get current user information
     const currentUser = await User.findByPk(req.user.user_id, {
       include: [
@@ -233,13 +233,16 @@ const createSaleData = (reqBody, otherImages, currentUser, installationAmountId,
 
 export const getSales = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 18;
+  const limit = parseInt(req.query.limit) || 30;
   const offset = (page - 1) * limit;
 
   const { company_id: companyId, role_id: roleId, user_id: userId } = req.user;
 
   try {
     const where = buildWhereConditions(roleId, companyId, userId);
+    const filters = buildFilterConditions(req.query);
+    Object.assign(where, filters);
+
     const order = await buildOrderConditions(companyId);
     
     const sales = await Sales.findAll({
@@ -247,10 +250,10 @@ export const getSales = async (req, res) => {
       offset,
       where,
       include: getSalesIncludes(),
-      order: [...order, ['created_at', 'DESC']],
+      order: [['created_at', 'DESC'], ...order],
     });
 
-    const totalSales = await getTotalSalesCount(where, roleId, companyId, userId);
+    const totalSales = await getTotalSalesCount(where);
     const totalPages = Math.ceil(totalSales / limit);
 
     res.json({ sales, totalPages, currentPage: page });
@@ -258,6 +261,74 @@ export const getSales = async (req, res) => {
     console.error(error);
     res.status(500).json({ message: 'Error fetching sales' });
   }
+};
+
+export const getSalesData = async (req) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 30;
+  const offset = (page - 1) * limit;
+
+  const { company_id: companyId, role_id: roleId, user_id: userId } = req.user;
+
+  const where = buildWhereConditions(roleId, companyId, userId);
+  const filters = buildFilterConditions(req.query);
+  Object.assign(where, filters);
+
+  const sales = await Sales.findAll({
+    limit,
+    offset,
+    where,
+    include: getSalesIncludes(), // Define your associations here if needed
+    order: [['created_at', 'DESC']],
+  });
+
+  return { sales }; // Return sales data
+};
+
+
+const buildFilterConditions = (query) => {
+  const filters = {};
+
+  if (query.sales_channel_id) filters.sales_channel_id = query.sales_channel_id;
+  if (query.region_id) filters.region_id = query.region_id;
+  if (query.commune_id) filters.commune_id = query.commune_id;
+  if (query.is_priority) filters.is_priority = query.is_priority;
+  if (query.promotion_id) filters.promotion_id = query.promotion_id;
+  if (query.installation_amount_id) filters.installation_amount_id = query.installation_amount_id;
+  if (query.sale_status_id) filters.sale_status_id = query.sale_status_id;
+  if (query.sale_status_reason_id) filters.sale_status_reason_id = query.sale_status_reason_id;
+  if (query.company_id) filters.company_id = query.company_id;
+  
+  if (query.start_date) {
+    // No es necesario dividir la fecha ya que el formato es YYYY-MM-DD
+    const startDateFormatted = query.start_date; // Mantener en formato 'aaaa-mm-dd'
+    
+    if (query.end_date) {
+      const endDateFormatted = query.end_date; // Mantener en formato 'aaaa-mm-dd'
+      
+      filters.created_at = {
+        [Op.between]: [new Date(startDateFormatted), new Date(endDateFormatted)]
+      };
+    } else {
+      filters.created_at = {
+        [Op.gte]: new Date(startDateFormatted)
+      };
+    }
+  } else if (query.end_date) {
+    const endDateFormatted = query.end_date; // Mantener en formato 'aaaa-mm-dd'
+    
+    filters.created_at = {
+      [Op.lte]: new Date(endDateFormatted)
+    };
+  }
+  
+
+  // Para el filtro de rol, necesitamos incluir el modelo User y su relación con Role
+  if (query.role_id) {
+    filters['$executive.role.role_id$'] = query.role_id;
+  }
+
+  return filters;
 };
 
 const buildWhereConditions = (roleId, companyId, userId) => {
@@ -293,6 +364,8 @@ const buildOrderConditions = async (companyId) => {
   if (priorityLevels.length > 0) {
     order.push(Sequelize.literal(`FIELD(company_priority_id, ${priorityLevels.join(',')})`));
   }
+
+  order.push(['created_at', 'DESC']);
 
   return order;
 };
@@ -343,9 +416,7 @@ const getSalesIncludes = () => [
     as: 'executive',
     attributes: [
       'first_name',
-      'second_name',
       'last_name',
-      'second_last_name',
       'rut',
       'email',
       'phone_number',
@@ -429,9 +500,7 @@ export const getSaleById = async (req, res) => {
           as: 'executive',
           attributes: [
             'first_name',
-            'second_name',
             'last_name',
-            'second_last_name',
             'rut',
             'email',
             'phone_number',
@@ -592,7 +661,7 @@ export const getSalesBySearch = async (req, res) => {
         'department_office_floor',
         'geo_reference',
         'additional_comments',
-        'id_card_image',
+        'is_priority',
         'created_at'
       ],
       include: [
@@ -697,22 +766,22 @@ export const updateSale = async (req, res) => {
     const userCompanyId = req.user.company_id;
 
     const {
-      service_id,
+      service_id = null,
       client_first_name,
       client_last_name,
       client_rut,
       client_email,
       client_phone,
-      client_secondary_phone,
+      client_secondary_phone = null,
       region_id,
       commune_id,
       street,
       number,
-      department_office_floor,
+      department_office_floor = null,
       geo_reference,
       promotion_id,
       installation_amount_id,
-      additional_comments,
+      additional_comments = null,
       is_priority,
       sale_status_id,
       sale_status_reason_id,
@@ -787,21 +856,18 @@ export const updateSale = async (req, res) => {
       other_images: allImages.join(',')
     };
 
-    // Verificar permisos basados en el rol
-    if (roleId !== 1 && sale.company_id !== userCompanyId) {
-      return res.status(403).json({ message: 'No tienes permisos para actualizar esta venta' });
-    }
+    console.log(updatedSaleData)
 
     let allowedFields = [];
     let allowedSaleStatuses = [];
 
     switch (roleId) {
       case 1: // SuperAdmin
-        allowedFields = ['service_id', 'client_first_name', 'client_last_name', 'client_rut', 'client_email', 'client_phone', 'client_secondary_phone', 'region_id', 'commune_id', 'street', 'number', 'department_office_floor', 'geo_reference', 'promotion_id', 'installation_amount_id', 'additional_comments', 'is_priority', 'sale_status_id', 'sale_status_reason_id', 'company_id', 'other_images'];
+        allowedFields = ['service_id', 'client_first_name', 'client_last_name', 'client_rut', 'client_email', 'client_phone', 'client_secondary_phone', 'region_id', 'commune_id', 'street', 'number', 'department_office_floor', 'geo_reference', 'promotion_id', 'installation_amount_id', 'additional_comments', 'is_priority', 'sale_status_id', 'sale_status_reason_id', 'company_id', 'other_images', 'existing_images'];
         allowedSaleStatuses = [1, 2, 3, 4, 5, 6, 7];
         break;
       case 2: // Administrador
-        allowedFields = ['service_id', 'client_first_name', 'client_last_name', 'client_rut', 'client_email', 'client_phone', 'client_secondary_phone', 'region_id', 'commune_id', 'street', 'number', 'department_office_floor', 'geo_reference', 'promotion_id', 'installation_amount_id', 'additional_comments', 'is_priority', 'sale_status_id', 'sale_status_reason_id', 'other_images'];
+        allowedFields = ['service_id', 'client_first_name', 'client_last_name', 'client_rut', 'client_email', 'client_phone', 'client_secondary_phone', 'region_id', 'commune_id', 'street', 'number', 'department_office_floor', 'geo_reference', 'promotion_id', 'installation_amount_id', 'additional_comments', 'is_priority', 'sale_status_id', 'sale_status_reason_id', 'other_images', 'existing_images'];
         allowedSaleStatuses = [1, 2, 3, 4, 5, 6, 7];
         break;
       case 3: // Ejecutivo
@@ -809,7 +875,7 @@ export const updateSale = async (req, res) => {
         allowedSaleStatuses = [1];
         break;
       case 4: // Validador
-        allowedFields = ['service_id', 'client_first_name', 'client_last_name', 'client_rut', 'client_email', 'client_phone', 'client_secondary_phone', 'region_id', 'commune_id', 'street', 'number', 'department_office_floor', 'geo_reference', 'promotion_id', 'installation_amount_id', 'additional_comments', 'is_priority', 'sale_status_id', 'sale_status_reason_id', 'other_images'];
+        allowedFields = ['service_id', 'client_first_name', 'client_last_name', 'client_rut', 'client_email', 'client_phone', 'client_secondary_phone', 'region_id', 'commune_id', 'street', 'number', 'department_office_floor', 'geo_reference', 'promotion_id', 'installation_amount_id', 'additional_comments', 'is_priority', 'sale_status_id', 'sale_status_reason_id', 'other_images', 'existing_images'];
         allowedSaleStatuses = [2, 3, 4, 7];
         break;
       case 5: // Despachador
@@ -857,6 +923,24 @@ export const updateSale = async (req, res) => {
 
     // Actualizar la venta
     await sale.update(filteredUpdatedSaleData);
+
+    // Actualizar campos específicos basados en el rol
+    filteredUpdatedSaleData.modified_by_user_id = userId;
+
+    const roleMap = {
+      1: { superadmin_id: userId },
+      2: { admin_id: userId },
+      3: { executive_id: userId },
+      4: { validator_id: userId },
+      5: { dispatcher_id: userId },
+    };
+
+    Object.assign(filteredUpdatedSaleData, roleMap[roleId]);
+
+    // Actualizar el priority_modified_by_user_id si se actualiza el is_priority a 1
+    if (filteredUpdatedSaleData.is_priority === 1) {
+      filteredUpdatedSaleData.priority_modified_by_user_id = userId;
+    }
 
     res.status(200).json({ message: 'Venta actualizada con éxito', sale });
   } catch (error) {
