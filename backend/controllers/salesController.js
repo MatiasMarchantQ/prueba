@@ -14,8 +14,8 @@ import SaleStatusReason from '../models/SaleStatusReason.js';
 import path from 'path';
 import fs from 'fs';
 import { fetchRegionById } from '../services/dataServices.js';
-import { Op } from 'sequelize';
-import { Sequelize, DataTypes } from 'sequelize';
+import { exportSales } from '../controllers/exportController.js';
+import { Op, Sequelize } from 'sequelize';
 import { sendEmailNotification } from '../services/emailService.js';
 
 const validateInputs = async (reqBody) => {
@@ -230,11 +230,12 @@ const createSaleData = (reqBody, otherImages, currentUser, installationAmountId,
   };
 };
 
-
-export const getSales = async (req, res) => {
+export const getSalesData = async (req) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 30;
   const offset = (page - 1) * limit;
+  const sortField = req.query.sortField;
+  const sortOrder = req.query.sortOrder || 'DESC';
 
   const { company_id: companyId, role_id: roleId, user_id: userId } = req.user;
 
@@ -243,48 +244,108 @@ export const getSales = async (req, res) => {
     const filters = buildFilterConditions(req.query);
     Object.assign(where, filters);
 
-    const order = await buildOrderConditions(companyId);
+    const order = await buildOrderConditions(companyId, sortField, sortOrder);
     
     const sales = await Sales.findAll({
       limit,
       offset,
       where,
       include: getSalesIncludes(),
-      order: [['created_at', 'DESC'], ...order],
+      order,
     });
 
     const totalSales = await getTotalSalesCount(where);
     const totalPages = Math.ceil(totalSales / limit);
 
-    res.json({ sales, totalPages, currentPage: page });
+    return { sales, totalPages, currentPage: page };
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+};
+
+export const getAllSales = async (req) => {
+  const { company_id: companyId, role_id: roleId, user_id: userId } = req.user;
+  const sortField = req.query.sortField;
+  const sortOrder = req.query.sortOrder || 'DESC';
+
+  try {
+    const where = buildWhereConditions(roleId, companyId, userId);
+    const filters = buildFilterConditions(req.query);
+    Object.assign(where, filters);
+
+    const order = await buildOrderConditions(companyId, sortField, sortOrder);
+
+    const sales = await Sales.findAll({
+      where,
+      include: getSalesIncludes(),
+      order,
+    });
+
+    return sales;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+};
+
+export const getSales = async (req, res) => {
+  try {
+    const data = await getSalesData(req);
+    if (req.query.export === 'true') {
+      const sales = await getAllSales(req);
+
+      // Agregar todas las ventas a la hoja de cálculo
+      const allSales = [];
+      for (let i = 1; i <= data.totalPages; i++) {
+        const pageSales = await getAllSales(req, i);
+        allSales.push(...pageSales);
+      }
+
+      const salesExport = allSales.map(sale => {
+        const date = new Date(sale.created_at);
+        const createdAt = `${date.getFullYear()}-${padZero(date.getMonth() + 1)}-${padZero(date.getDate())} ${padZero(date.getHours())}:${padZero(date.getMinutes())}:${padZero(date.getSeconds())}`;
+
+        return {
+          sale_id: sale.sale_id,
+          service_id: sale.service_id,
+          client_first_name: sale.client_first_name,
+          client_last_name: sale.client_last_name,
+          client_rut: sale.client_rut,
+          client_email: sale.client_email,
+          client_phone: sale.client_phone,
+          client_secondary_phone: sale.client_secondary_phone,
+          region: sale.region.region_name,
+          commune: sale.commune.commune_name,
+          street: sale.street,
+          number: sale.number,
+          department_office_floor: sale.department_office_floor,
+          geo_reference: sale.geo_reference,
+          promotion: sale.promotion.promotion,
+          installationAmount: sale.installationAmount.amount,
+          additional_comments: sale.additional_comments,
+          is_priority: sale.is_priority,
+          saleStatus: sale.saleStatus.status_name,
+          reason: sale.reason ? sale.reason.reason_name : '', // Dejar el campo vacío si no hay motivo
+          company: sale.company.company_name,
+          created_at: createdAt
+        };
+      });
+
+      const format = req.query.format;
+      await exportSales(salesExport, format, res);
+    } else {
+      res.json(data);
+    }
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error fetching sales' });
   }
 };
 
-export const getSalesData = async (req) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 30;
-  const offset = (page - 1) * limit;
-
-  const { company_id: companyId, role_id: roleId, user_id: userId } = req.user;
-
-  const where = buildWhereConditions(roleId, companyId, userId);
-  const filters = buildFilterConditions(req.query);
-  Object.assign(where, filters);
-
-  const sales = await Sales.findAll({
-    limit,
-    offset,
-    where,
-    include: getSalesIncludes(), // Define your associations here if needed
-    order: [['created_at', 'DESC']],
-  });
-
-  return { sales }; // Return sales data
-};
-
+function padZero(value) {
+  return (value < 10 ? '0' : '') + value;
+}
 
 const buildFilterConditions = (query) => {
   const filters = {};
@@ -352,20 +413,26 @@ const buildWhereConditions = (roleId, companyId, userId) => {
   return where;
 };
 
-const buildOrderConditions = async (companyId) => {
+const buildOrderConditions = async (companyId, sortField, sortOrder) => {
   const companyPriorities = await CompanyPriority.findAll({
     where: { company_id: companyId },
     attributes: ['priority_level'],
   });
 
   const priorityLevels = companyPriorities.map(priority => priority.priority_level);
-  const order = [];
+  let order = [];
 
   if (priorityLevels.length > 0) {
     order.push(Sequelize.literal(`FIELD(company_priority_id, ${priorityLevels.join(',')})`));
   }
 
-  order.push(['created_at', 'DESC']);
+  if (sortField && sortOrder) {
+    // Si se proporciona un campo de ordenamiento, añádelo al principio del array de orden
+    order.unshift([sortField, sortOrder.toUpperCase()]);
+  } else {
+    // Si no se proporciona un campo de ordenamiento, mantén el orden por defecto
+    order.push(['created_at', 'DESC']);
+  }
 
   return order;
 };
@@ -414,6 +481,38 @@ const getSalesIncludes = () => [
   {
     model: User,
     as: 'executive',
+    attributes: [
+      'first_name',
+      'last_name',
+      'rut',
+      'email',
+      'phone_number',
+    ],
+    include: [{
+      model: Role,
+      as: 'role',
+      attributes: ['role_name'],
+    }],
+  },
+  {
+    model: User,
+    as: 'validator',
+    attributes: [
+      'first_name',
+      'last_name',
+      'rut',
+      'email',
+      'phone_number',
+    ],
+    include: [{
+      model: Role,
+      as: 'role',
+      attributes: ['role_name'],
+    }],
+  },
+  {
+    model: User,
+    as: 'dispatcher',
     attributes: [
       'first_name',
       'last_name',
