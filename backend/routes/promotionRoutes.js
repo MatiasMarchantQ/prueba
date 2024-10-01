@@ -1,11 +1,15 @@
 import { Router } from 'express';
-import { addPromotionWithInstallationAmount, editPromotion, getInstallationAmounts, getPromotions, updateInstallationAmountForPromotion, assignPromotionsToCommune, disablePromotionsForCommune} from '../controllers/promotionController.js';
+import { addPromotionWithInstallationAmount, getPromotionsByUser, getInstallationAmountsByUser , editPromotion, getInstallationAmounts, getPromotions, updateInstallationAmountForPromotion, assignPromotionsToCommune, disablePromotionsForCommune} from '../controllers/promotionController.js';
 import { authenticate } from '../middlewares/authMiddleware.js'; // Asegúrate de importar el middleware de autenticación
 
 const router = Router();
 
 //Devuelve lista de promociones
 router.get('/', authenticate, getPromotions);
+
+router.get('/by-user', authenticate, getPromotionsByUser);
+
+router.get('/installationAmountsByUser', authenticate, getInstallationAmountsByUser);
 
 //Devuelve la cantidad de instalaciones por una promocion especifica
 router.get('/installation-amounts', authenticate, getInstallationAmounts);

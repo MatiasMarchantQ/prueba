@@ -39,10 +39,12 @@ const Sales = sequelize.define('Sales', {
     allowNull: true,
   },
   client_phone: {
-    type: DataTypes.STRING(20)
+    type: DataTypes.STRING(20),
+    allowNull: true,
   },
   client_secondary_phone: {
-    type: DataTypes.STRING(20)
+    type: DataTypes.STRING(20),
+    allowNull: true,
   },
   region_id: {
     type: DataTypes.INTEGER(11),
@@ -59,16 +61,20 @@ const Sales = sequelize.define('Sales', {
     },
   },
   street: {
-    type: DataTypes.STRING(255)
+    type: DataTypes.STRING(255),
+    allowNull: true,
   },
   number: {
-    type: DataTypes.STRING(10)
+    type: DataTypes.STRING(10),
+    allowNull: true,
   },
   department_office_floor: {
-    type: DataTypes.STRING(50)
+    type: DataTypes.STRING(50),
+    allowNull: true,
   },
   geo_reference: {
-    type: DataTypes.STRING(255)
+    type: DataTypes.STRING(255),
+    allowNull: true,
   },
   promotion_id: {
     type: DataTypes.INTEGER(11),
@@ -85,7 +91,8 @@ const Sales = sequelize.define('Sales', {
     }
   },
   additional_comments: {
-    type: DataTypes.TEXT
+    type: DataTypes.TEXT,
+    allowNull: true,
   },
   id_card_image: {
     type: DataTypes.STRING(255),
@@ -275,6 +282,14 @@ const Sales = sequelize.define('Sales', {
           date_type: 'Validado',
           date: new Date(),
         });
+
+      } else if (sale.sale_status_id === 6) {
+        await SaleHistory.create({
+          sale_id: sale.sale_id,
+          date_type: 'Activo',
+          date: new Date(),
+        });
+      
       } else if (sale.sale_status_id === 7) {
         await SaleHistory.create({
           sale_id: sale.sale_id,
@@ -282,7 +297,6 @@ const Sales = sequelize.define('Sales', {
           date: new Date(),
         });
       }
-  
       // Register priority change event if applicable
       if (sale.is_priority === 1) {
         await SaleHistory.create({

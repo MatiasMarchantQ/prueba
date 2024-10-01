@@ -27,6 +27,7 @@ const sequelize = new Sequelize(
   }
 );
 
+
 User.belongsTo(Role, { foreignKey: 'role_id', as: 'role' });
 Role.hasMany(User, { foreignKey: 'role_id', as: 'users' });
 User.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifiedByUser' });
@@ -53,10 +54,14 @@ Sales.belongsTo(InstallationAmount, { foreignKey: 'installation_amount_id', as: 
 Sales.belongsTo(User, { foreignKey: 'executive_id', as: 'executive' });
 Sales.belongsTo(User, { foreignKey: 'validator_id', as: 'validator' });
 Sales.belongsTo(User, { foreignKey: 'dispatcher_id', as: 'dispatcher' });
+Sales.belongsTo(User, { foreignKey: 'superadmin_id', as: 'superadmin' });
+Sales.belongsTo(User, { foreignKey: 'admin_id', as: 'admin' });
+
+
 Sales.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifiedByUser' });
 Sales.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
-Sales.belongsTo(CompanyPriority, { foreignKey: 'company_priority_id', as: 'companypriority' });
-
+Sales.belongsTo(CompanyPriority, { foreignKey: 'company_id' });
+CompanyPriority.hasMany(Sales, { foreignKey: 'company_id' });
 
 
 Sales.belongsTo(SaleStatus, { foreignKey: 'sale_status_id', as: 'saleStatus' });

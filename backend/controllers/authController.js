@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export const login = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, rememberMe } = req.body;
 
   try {
     const user = await Users.findOne({ where: { email } });
@@ -27,12 +27,19 @@ export const login = async (req, res) => {
       attributes: ['role_id', 'role_name']
     });
 
+    let expiresIn;
+    if (rememberMe) {
+      expiresIn = '7d'; // 7 días
+    } else {
+      expiresIn = '1h'; // 1 hora
+    }
+
     const token = jwt.sign({
       user_id: user.user_id,
       role_id: user.role_id,
       must_change_password: user.must_change_password,
       status: user.status,
-    }, process.env.SECRET_KEY, { expiresIn: '1h' });
+    }, process.env.SECRET_KEY, { expiresIn });
 
     res.status(200).json({
       message: 'Login exitoso',

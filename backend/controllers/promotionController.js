@@ -1,3 +1,6 @@
+import User from '../models/Users.js';
+import Role from '../models/Roles.js';
+import Sale from '../models/Sales.js'
 import Promotion from '../models/Promotions.js';
 import PromotionCommune from '../models/PromotionsCommunes.js';
 import InstallationAmount from '../models/InstallationAmounts.js';
@@ -27,6 +30,72 @@ export const getPromotions = async (req, res) => {
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: 'Error al obtener promociones' });
+    }
+  };
+
+  export const getPromotionsByUser = async (req, res) => {
+    try {
+      const sales = await Sale.findAll({
+        where: {
+          executive_id: req.user.user_id,
+        },
+        include: [
+          {
+            model: Promotion,
+            as: 'promotion',
+            attributes: ['promotion_id', 'promotion'],
+          },
+        ],
+      });
+  
+      if (!sales) {
+        return res.status(404).json({ message: 'No se encontraron ventas' });
+      }
+  
+      const promotions = [...new Map(sales.map((sale) => [sale.promotion_id, sale.promotion])).values()].map((promotion) => ({
+        promotion_id: promotion.promotion_id,
+        promotion: promotion.promotion,
+      }));
+      
+      const result = promotions;
+        
+      res.status(200).json(promotions);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Error al obtener promociones' });
+    }
+  };
+
+  export const getInstallationAmountsByUser = async (req, res) => {
+    try {
+      const sales = await Sale.findAll({
+        where: {
+          executive_id: req.user.user_id,
+        },
+        include: [
+          {
+            model: InstallationAmount,
+            as: 'installationAmount',
+            attributes: ['amount'],
+          },
+        ],
+        attributes: ['sale_id', 'installation_amount_id'],
+      });
+  
+      if (!sales) {
+        return res.status(404).json({ message: 'No se encontraron ventas' });
+      }
+  
+      const installationAmounts = [...new Map(sales.map((sale) => [sale.installation_amount_id, sale])).values()].map((sale) => ({
+        sale_id: sale.sale_id,
+        installation_amount_id: sale.installation_amount_id,
+        amount: sale.installationAmount.amount,
+      }));
+  
+      res.status(200).json(installationAmounts);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Error al obtener montos de instalación' });
     }
   };
 

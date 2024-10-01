@@ -97,13 +97,10 @@ export const createSale = async (req, res) => {
       return acc;
     }, {});
 
-    const files = req.files;
-    if (!req.files || !req.files.other_images) {
-      return res.status(400).json({ message: 'No files provided' });
-    }
+    const files = req.files; 
 
     // Handle file renaming for each image type
-    const otherImages = handleFileRenaming(files.other_images, reqBody.client_rut);
+    const otherImages = files && files.other_images ? handleFileRenaming(files.other_images, reqBody.client_rut) : null;
 
     // Validate inputs
     const { promotion, installationAmountId } = await validateInputs(reqBody);
@@ -120,7 +117,7 @@ export const createSale = async (req, res) => {
       ],
     });
     if (!currentUser) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
     // Get company priority
@@ -129,22 +126,22 @@ export const createSale = async (req, res) => {
       order: [['priority_level', 'ASC']] 
     });
     if (!companyPriority) {
-      return res.status(404).json({ message: 'Company priority not found' });
+      return res.status(404).json({ message: 'Prioridad de empresa no encontrada' });
     }
 
     // Check for existing RUT and email
     const existingRut = await Sales.findOne({ where: { client_rut: reqBody.client_rut } });
     if (existingRut) {
-      return res.status(400).json({ message: 'RUT already exists in the database' });
+      return res.status(400).json({ message: 'El RUT ya existe en la base de datos' });
     }
 
     const existingEmail = await Sales.findOne({ where: { client_email: reqBody.client_email } });
     if (existingEmail) {
-      return res.status(400).json({ message: 'Email already exists in the database' });
+      return res.status(400).json({ message: 'El email ya existe en la base de datos' });
     }
 
     // Create sale data
-    const saleData = createSaleData(reqBody, otherImages, currentUser, promotion.installation_amount_id, companyPriority.priority_level);
+    const saleData = createSaleData(reqBody, otherImages ? otherImages : [], currentUser, promotion.installation_amount_id, companyPriority.priority_level);
     const sale = await Sales.create(saleData);
 
     // Send email notification if the sale is in initial status
@@ -230,7 +227,7 @@ const createSaleData = (reqBody, otherImages, currentUser, installationAmountId,
   };
 };
 
-export const getSalesData = async (req) => {
+const getSalesData = async (req) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 30;
   const offset = (page - 1) * limit;
@@ -244,7 +241,7 @@ export const getSalesData = async (req) => {
     const filters = buildFilterConditions(req.query);
     Object.assign(where, filters);
 
-    const order = await buildOrderConditions(companyId, sortField, sortOrder);
+    const order = await buildOrderConditions(companyId, roleId, sortField, sortOrder);
     
     const sales = await Sales.findAll({
       limit,
@@ -278,7 +275,14 @@ export const getAllSales = async (req) => {
 
     const sales = await Sales.findAll({
       where,
-      include: getSalesIncludes(),
+      include: [
+        ...getSalesIncludes(),
+        {
+          model: Company,
+          as: 'company',
+          attributes: ['priority_level'],
+        },
+      ],
       order,
     });
 
@@ -298,8 +302,8 @@ export const getSales = async (req, res) => {
       // Agregar todas las ventas a la hoja de cálculo
       const allSales = [];
       for (let i = 1; i <= data.totalPages; i++) {
-        const pageSales = await getAllSales(req, i);
-        allSales.push(...pageSales);
+        const pageSales = await getSalesData(req, i);
+        allSales.push(...pageSales.sales);
       }
 
       const salesExport = allSales.map(sale => {
@@ -388,6 +392,18 @@ const buildFilterConditions = (query) => {
   if (query.role_id) {
     filters['$executive.role.role_id$'] = query.role_id;
   }
+  if (query.superadmin_id) {
+    filters['$superadmin.role.role_id$'] = query.superadmin_id;
+  }
+  if (query.admin_id) {
+    filters['$admin.role.role_id$'] = query.admin_id;
+  }
+  if (query.validator_id) {
+    filters['$validator.role.role_id$'] = query.validator_id;
+  }
+  if (query.dispatcher_id) {
+    filters['$dispatcher.role.role_id$'] = query.dispatcher_id;
+  }
 
   return filters;
 };
@@ -413,25 +429,32 @@ const buildWhereConditions = (roleId, companyId, userId) => {
   return where;
 };
 
-const buildOrderConditions = async (companyId, sortField, sortOrder) => {
-  const companyPriorities = await CompanyPriority.findAll({
-    where: { company_id: companyId },
-    attributes: ['priority_level'],
-  });
-
-  const priorityLevels = companyPriorities.map(priority => priority.priority_level);
+const buildOrderConditions = async (roleId, sortField, sortOrder) => {
   let order = [];
-
-  if (priorityLevels.length > 0) {
-    order.push(Sequelize.literal(`FIELD(company_priority_id, ${priorityLevels.join(',')})`));
-  }
 
   if (sortField && sortOrder) {
     // Si se proporciona un campo de ordenamiento, añádelo al principio del array de orden
     order.unshift([sortField, sortOrder.toUpperCase()]);
   } else {
     // Si no se proporciona un campo de ordenamiento, mantén el orden por defecto
-    order.push(['created_at', 'DESC']);
+    order.push([Sequelize.literal('CASE WHEN `Sales`.sale_status_id IN (1, 2) AND is_priority = 1 THEN 0 ELSE 1 END'), 'ASC']);
+    order.push([{ model: Company, as: 'company' }, 'priority_level', 'ASC']);
+    order.push(['sale_id', 'DESC']);
+
+    switch (roleId) {
+      case 3:
+        order.push([Sequelize.literal('CASE WHEN `Sales`.sale_status_id = 4 THEN 0 WHEN `Sales`.sale_status_id = 1 THEN 1 ELSE 2 END'), 'ASC']);
+        break;
+      case 4:
+        order.push([Sequelize.literal('CASE WHEN `Sales`.sale_status_id = 1 THEN 0 WHEN `Sales`.sale_status_id = 3 THEN 1 ELSE 2 END'), 'ASC']);
+        break;
+      case 5:
+        order.push([Sequelize.literal('CASE WHEN `Sales`.sale_status_id = 2 THEN 0 WHEN `Sales`.sale_status_id = 5 THEN 1 WHEN `Sales`.sale_status_id = 6 THEN 2 ELSE 3 END'), 'ASC']);
+        break;
+      default:
+        order.push([{ model: SaleStatus, as: 'saleStatus' }, 'sale_status_id', 'ASC']);
+        break;
+    }
   }
 
   return order;
@@ -526,6 +549,38 @@ const getSalesIncludes = () => [
       attributes: ['role_name'],
     }],
   },
+  {
+    model: User,
+    as: 'superadmin',
+    attributes: [
+      'first_name',
+      'last_name',
+      'rut',
+      'email',
+      'phone_number',
+    ],
+    include: [{
+      model: Role,
+      as: 'role',
+      attributes: ['role_name'],
+    }],
+  },
+  {
+    model: User,
+    as: 'admin',
+    attributes: [
+      'first_name',
+      'last_name',
+      'rut',
+      'email',
+      'phone_number',
+    ],
+    include: [{
+      model: Role,
+      as: 'role',
+      attributes: ['role_name'],
+    }],
+  },
 ];
 
 const getTotalSalesCount = async (where, roleId, companyId, userId) => {
@@ -597,6 +652,62 @@ export const getSaleById = async (req, res) => {
         {
           model: User,
           as: 'executive',
+          attributes: [
+            'first_name',
+            'last_name',
+            'rut',
+            'email',
+            'phone_number',
+          ],
+          include: [
+            {
+              model: Role,
+              as: 'role',
+              attributes: ['role_name'],
+            },
+            {
+              model: SalesChannel,
+              as: 'salesChannel',
+              attributes: ['channel_name'],
+            },
+            {
+              model: Company,
+              as: 'company',
+              attributes: ['company_name'],
+            },
+          ],
+        },
+        {
+          model: User,
+          as: 'superadmin',
+          attributes: [
+            'first_name',
+            'last_name',
+            'rut',
+            'email',
+            'phone_number',
+          ],
+          include: [
+            {
+              model: Role,
+              as: 'role',
+              attributes: ['role_name'],
+            },
+            {
+              model: SalesChannel,
+              as: 'salesChannel',
+              attributes: ['channel_name'],
+            },
+            {
+              model: Company,
+              as: 'company',
+              attributes: ['company_name'],
+            },
+          ],
+        },
+        {
+          model: User,
+          as: 'admin',
           attributes: [
             'first_name',
             'last_name',

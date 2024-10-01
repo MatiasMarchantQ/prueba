@@ -10,6 +10,9 @@ const Company = sequelize.define('Company', {
   company_name: {
     type: DataTypes.STRING(255),
     index: true
+  },
+  priority_level: {
+    type: DataTypes.INTEGER(11),
   }
 }, {
   tableName: 'companies',
