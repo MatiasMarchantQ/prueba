@@ -1159,10 +1159,50 @@ export const updateSale = async (req, res) => {
   }
 };
 
+
+export const updateSalePriority = async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+    const roleId = req.user.role_id;
+    const saleId = req.params.sale_id;
+
+    const { is_priority } = req.body;
+
+    const sale = await Sales.findByPk(saleId);
+    if (!sale) {
+      return res.status(404).json({ message: 'Venta no encontrada' });
+    }
+
+    // Verificar si el usuario tiene permisos para actualizar la venta
+    if (roleId !== 1 && roleId !== 2 && roleId !== 3) {
+      return res.status(403).json({ message: 'No tienes permisos para actualizar la venta' });
+    }
+
+    // Actualizar el is_priority
+    const updatedSaleData = {
+      is_priority,
+      modified_by_user_id: userId,
+    };
+
+    // Actualizar el priority_modified_by_user_id si se actualiza el is_priority a 1
+    if (is_priority === 1) {
+      updatedSaleData.priority_modified_by_user_id = userId;
+    }
+
+    await sale.update(updatedSaleData);
+
+    res.status(200).json({ message: 'Venta actualizada con éxito', sale });
+  } catch (error) {
+    console.error('Error details:', error);
+    res.status(500).json({ message: 'Error al actualizar la venta', error: error.message });
+  }
+};
+
 export default {
   createSale,
   getPromotionsByCommune,
   getInstallationAmountsByPromotion,
   getSales,
-  updateSale
+  updateSale,
+  updateSalePriority
 };

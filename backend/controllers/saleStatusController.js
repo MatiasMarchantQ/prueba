@@ -22,7 +22,7 @@ export const getSaleStatuses = async (req, res) => {
     } else if (userRoleId === 5) {
       saleStatuses = await SaleStatus.findAll({
         where: {
-          sale_status_id: [5, 6, 7]
+          sale_status_id: [2, 5, 6, 7]
         }
       });
     } else if (userRoleId === 3) {
