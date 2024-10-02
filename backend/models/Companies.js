@@ -13,7 +13,11 @@ const Company = sequelize.define('Company', {
   },
   priority_level: {
     type: DataTypes.INTEGER(11),
-  }
+  },
+  is_active: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
+  },
 }, {
   tableName: 'companies',
   timestamps: false,

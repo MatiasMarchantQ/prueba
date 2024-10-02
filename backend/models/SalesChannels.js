@@ -32,6 +32,10 @@ const SalesChannel = sequelize.define('SalesChannel', {
       key: 'user_id',
     },
   },
+  is_active: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
+  },
 }, {
   tableName: 'saleschannels',
   timestamps: false,

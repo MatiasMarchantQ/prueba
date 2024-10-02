@@ -35,6 +35,10 @@ const Commune = sequelize.define('Commune', {
     onDelete: 'SET NULL',
     onUpdate: 'CASCADE',
   },
+  is_active: {
+    type: DataTypes.TINYINT,
+    defaultValue: 1
+  },
 }, {
   tableName: 'communes',
   timestamps: false,

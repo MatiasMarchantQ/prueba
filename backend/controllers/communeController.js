@@ -1,9 +1,6 @@
 // controllers/communeController.js
 import  Commune  from '../models/Communes.js';
 import  Region  from '../models/Regions.js';
-import Promotion from '../models/Promotions.js';
-import PromotionCommune from '../models/PromotionsCommunes.js';
-import InstallationAmount from '../models/InstallationAmounts.js';
 import { Op } from 'sequelize';
 
 export const getCommunesByRegion = async (req, res) => {
@@ -12,7 +9,8 @@ export const getCommunesByRegion = async (req, res) => {
   try {
     const communes = await Commune.findAll({
       where: {
-        region_id: regionId
+        region_id: regionId,
+        is_active: 1 // Solo obtener comunas con is_active === 1
       }
     });
     
@@ -71,5 +69,23 @@ export const updateCommune = async (req, res) => {
   } catch (error) {
     console.error('Error updating commune:', error);
     res.status(500).json({ message: 'Error updating commune', error: error.message });
+  }
+};
+
+export const toggleCommuneStatus = async (req, res) => {
+  const { communeId } = req.params;
+  const { isActive } = req.body;
+
+  try {
+    const commune = await Commune.findByPk(communeId);
+    if (!commune) {
+      return res.status(404).json({ message: 'Commune not found' });
+    }
+
+    await commune.update({ is_active: isActive });
+    res.status(200).json({ message: `Commune ${isActive ? 'enabled' : 'disabled'} successfully` });
+  } catch (error) {
+    console.error('Error toggling commune status:', error);
+    res.status(500).json({ message: 'Error toggling commune status', error: error.message });
   }
 };

@@ -173,6 +173,28 @@ export const updateInstallationAmountForPromotion = async (req, res) => {
     }
   };
 
+  //Modificar monto de instalación
+  export const updateInstallationAmount = async (req, res) => {
+    try {
+      const installationAmountId = req.params.installationAmountId;
+      const newAmount = req.body.amount;
+  
+      const installationAmount = await InstallationAmount.findByPk(installationAmountId);
+      if (!installationAmount) {
+        return res.status(404).json({ message: 'Monto de instalación no encontrado' });
+      }
+  
+      await installationAmount.update({
+        amount: newAmount,
+      });
+  
+      res.status(200).json({ message: 'Monto de instalación actualizado con éxito' });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Error al actualizar monto de instalación' });
+    }
+  };
+
   export const assignPromotionsToCommune = async (req, res) => {
     const { communeId } = req.params;
     const { promotionIds } = req.body;
