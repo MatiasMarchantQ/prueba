@@ -4,7 +4,7 @@ import { getAllUsers, register, updateMyProfile, updateUserByAdmin, getMe, getUs
 import { authenticate, isAnyRole } from '../middlewares/authMiddleware.js';
 
 //get
-router.get('/', authenticate, isAnyRole(['SuperAdmin']), getAllUsers);
+router.get('/', authenticate, isAnyRole(['SuperAdmin', 'Administrador']), getAllUsers);
 router.get('/me', authenticate, getMe);
 router.get('/:user_id', authenticate, isAnyRole(['SuperAdmin','Administrador']), getUserById);
 

@@ -209,104 +209,19 @@ const Sales = sequelize.define('Sales', {
 }, {
   hooks: {
     afterCreate: async (sale, options) => {
+      const modificationDate = new Date();
+      const chileanDate = modificationDate.toLocaleString('es-CL', {
+        timeZone: 'America/Santiago',
+      });
       await SaleHistory.create({
         sale_id: sale.sale_id,
         new_status_id: sale.sale_status_id,
         sale_status_reason_id: sale.sale_status_reason_id,
         modified_by_user_id: sale.modified_by_user_id,
-        modification_date: new Date(),
+        modification_date: chileanDate,
+        date_type: sale.sale_status_id === 1 ? 'Ingresado' : null,
       });
-  
-      // Verifica si el estado es 'Ingresado' (sale_status_id = 1)
-      if (sale.sale_status_id === 1) {
-        await SaleHistory.create({
-          sale_id: sale.sale_id,
-          date_type: 'Ingresado',
-          date: new Date(),
-        });
-      }
-    },
-  
-    afterUpdate: async (sale, options) => {
-      const lastHistory = await SaleHistory.findOne({
-        where: { sale_id: sale.sale_id },
-        order: [['modification_date', 'DESC']],
-      });
-  
-      // Check if is_priority was updated
-      const priorityChanged = sale.changed('is_priority');
-      const statusChanged = sale.changed('sale_status_id');
-  
-      if (priorityChanged && !statusChanged) {
-        // Case 1: Priority changed, but sale status didn't
-        await SaleHistory.create({
-          sale_id: sale.sale_id,
-          previous_status_id: lastHistory ? lastHistory.new_status_id : null,
-          new_status_id: sale.sale_status_id, // replicate current status
-          sale_status_reason_id: sale.sale_status_reason_id,
-          modified_by_user_id: sale.modified_by_user_id,
-          modification_date: new Date(),
-          priority_modified_by_user_id: sale.priority_modified_by_user_id,
-        });
-      }
-  
-      if (statusChanged && priorityChanged) {
-        // Case 2: Both sale_status_id and is_priority updated
-        await SaleHistory.create({
-          sale_id: sale.sale_id,
-          previous_status_id: lastHistory ? lastHistory.new_status_id : null,
-          new_status_id: sale.sale_status_id,
-          sale_status_reason_id: sale.sale_status_reason_id,
-          modified_by_user_id: sale.modified_by_user_id,
-          modification_date: new Date(),
-          priority_modified_by_user_id: sale.priority_modified_by_user_id, // Capture priority change as well
-        });
-      }
-  
-      if (statusChanged && !priorityChanged) {
-        // Case 3: Only sale_status_id updated
-        await SaleHistory.create({
-          sale_id: sale.sale_id,
-          previous_status_id: lastHistory ? lastHistory.new_status_id : null,
-          new_status_id: sale.sale_status_id,
-          sale_status_reason_id: sale.sale_status_reason_id,
-          modified_by_user_id: sale.modified_by_user_id,
-          modification_date: new Date(),
-        });
-      }
-  
-      // (Validado, Anulado)
-      if (sale.sale_status_id === 2) {
-        await SaleHistory.create({
-          sale_id: sale.sale_id,
-          date_type: 'Validado',
-          date: new Date(),
-        });
-
-      } else if (sale.sale_status_id === 6) {
-        await SaleHistory.create({
-          sale_id: sale.sale_id,
-          date_type: 'Activo',
-          date: new Date(),
-        });
-      
-      } else if (sale.sale_status_id === 7) {
-        await SaleHistory.create({
-          sale_id: sale.sale_id,
-          date_type: 'Anulado',
-          date: new Date(),
-        });
-      }
-      // Register priority change event if applicable
-      if (sale.is_priority === 1) {
-        await SaleHistory.create({
-          sale_id: sale.sale_id,
-          date_type: 'Prioridad',
-          date: new Date(),
-          priority_modified_by_user_id: sale.priority_modified_by_user_id,
-        });
-      }
-    },
+    }
   },
   tableName: 'sales',
   timestamps: true,

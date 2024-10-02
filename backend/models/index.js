@@ -44,6 +44,9 @@ SaleHistory.belongsTo(Sales, { foreignKey: 'sale_id', as: 'sale' });
 SaleHistory.belongsTo(SaleStatus, { foreignKey: 'previous_status_id', as: 'previousStatus' });
 SaleHistory.belongsTo(SaleStatus, { foreignKey: 'new_status_id', as: 'newStatus' });
 SaleHistory.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifiedByUser' });
+SaleHistory.belongsTo(SaleStatusReason, { foreignKey: 'sale_status_reason_id', as: 'reason' });
+SaleHistory.belongsTo(User, { as: 'priorityModifiedByUser', foreignKey: 'priority_modified_by_user_id' });
+
 SaleStatus.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifiedByUser' });
 SalesChannel.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifiedByUser' });
 Sales.belongsTo(SalesChannel, { foreignKey: 'sales_channel_id', as: 'salesChannel' });

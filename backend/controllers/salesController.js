@@ -1,4 +1,5 @@
 import Sales from '../models/Sales.js';
+import SaleHistory from '../models/SaleHistories.js';
 import Region from '../models/Regions.js';
 import Commune from '../models/Communes.js';
 import User from '../models/Users.js';
@@ -42,7 +43,7 @@ const validateInputs = async (reqBody) => {
       throw new Error('El motivo de estado de venta no está asociado al estado de venta');
     }
   } else if (sale_status_reason_id !== null && sale_status_reason_id !== undefined) {
-    throw new Error('No se debe proporcionar un motivo de estado de venta para el estado 1');
+    throw new Error('No se debe proporcionar un motivo de estado de venta para el estado Ingresado');
   }
 
   // Resto de las validaciones...
@@ -189,7 +190,6 @@ const handleFileRenaming = (files, clientRut) => {
   }
 };
 
-
 const createSaleData = (reqBody, otherImages, currentUser, installationAmountId, companyPriorityId) => {
   const { service_id, client_first_name, client_last_name, client_rut, client_email, client_phone, client_secondary_phone, region_id, commune_id, street, number, department_office_floor, geo_reference, promotion_id, additional_comments } = reqBody;
 
@@ -226,6 +226,100 @@ const createSaleData = (reqBody, otherImages, currentUser, installationAmountId,
     modified_by_user_id: currentUser.user_id,
   };
 };
+
+
+export const getSaleHistory = async (req, res) => {
+  try {
+    const { sale_id } = req.params;
+
+    // Obtener la venta
+    const sale = await Sales.findByPk(sale_id);
+
+    if (!sale) {
+      return res.status(404).json({ message: 'Venta no encontrada' });
+    }
+
+    // Obtener el historial de la venta
+    const saleHistory = await SaleHistory.findAll({
+      where: { sale_id },
+      include: [
+        {
+          model: User,
+          as: 'modifiedByUser',
+          attributes: ['first_name', 'last_name'],
+          include: [
+            {
+              model: Role,
+              as: 'role',
+              attributes: ['role_name'],
+            },
+          ],
+        },
+        {
+          model: User,
+          as: 'priorityModifiedByUser',
+          attributes: ['first_name', 'last_name'],
+          include: [
+            {
+              model: Role,
+              as: 'role',
+              attributes: ['role_name'],
+            },
+          ],
+        },
+        {
+          model: SaleStatus,
+          as: 'newStatus',
+          attributes: ['status_name'],
+        },
+        {
+          model: SaleStatus,
+          as: 'previousStatus',
+          attributes: ['status_name'],
+        },
+        {
+          model: SaleStatusReason,
+          as: 'reason',
+          attributes: ['reason_name'],
+        },
+      ],
+      order: [['modification_date', 'ASC']],
+    });
+
+    // Procesar el historial para obtener la información requerida
+    const processedHistory = saleHistory.map(history => {
+      let eventType = 'Actualización';
+      if (history.date_type) {
+        eventType = history.date_type;
+      } else if (history.previous_status_id === null && history.new_status_id === 1) {
+        eventType = 'Ingresado';
+      }
+      
+      return {
+        eventType,
+        date: history.modification_date || history.date,
+        user: history.modifiedByUser ? `${history.modifiedByUser.first_name} ${history.modifiedByUser.last_name} (${history.modifiedByUser.role.role_name})` : null,
+        previousStatus: history.previousStatus ? history.previousStatus.status_name : null,
+        newStatus: history.newStatus ? history.newStatus.status_name : null,
+        reason: history.reason ? history.reason.reason_name : null,
+        isPriority: history.is_priority === 1,
+        priorityModifiedBy: history.priorityModifiedByUser ? `${history.priorityModifiedByUser.first_name} ${history.priorityModifiedByUser.last_name} (${history.priorityModifiedByUser.role.role_name})` : null,
+      };
+    });
+
+    res.json({
+      sale_id: sale.sale_id,
+      client_name: `${sale.client_first_name} ${sale.client_last_name}`,
+      client_rut: sale.client_rut,
+      history: processedHistory,
+    });
+
+  } catch (error) {
+    console.error('Error al obtener el historial de la venta:', error);
+    res.status(500).json({ message: 'Error interno del servidor', error: error.message });
+  }
+};
+
 
 const getSalesData = async (req) => {
   const page = parseInt(req.query.page) || 1;
@@ -437,7 +531,8 @@ const buildOrderConditions = async (roleId, sortField, sortOrder) => {
     order.unshift([sortField, sortOrder.toUpperCase()]);
   } else {
     // Si no se proporciona un campo de ordenamiento, mantén el orden por defecto
-    order.push([Sequelize.literal('CASE WHEN `Sales`.sale_status_id IN (1, 2) AND is_priority = 1 THEN 0 ELSE 1 END'), 'ASC']);
+    order.push([Sequelize.literal('CASE WHEN is_priority = 1 THEN 0 ELSE 1 END'), 'ASC']);
+    order.push([Sequelize.literal('CASE WHEN `Sales`.sale_status_id IN (1, 2) THEN 0 ELSE 1 END'), 'ASC']);
     order.push([{ model: Company, as: 'company' }, 'priority_level', 'ASC']);
     order.push(['sale_id', 'DESC']);
 
@@ -1015,12 +1110,24 @@ export const updateSale = async (req, res) => {
       if (saleStatusReason) {
         saleDataToUpdate.sale_status_reason_id = saleStatusReason.sale_status_reason_id;
       } else {
-        saleDataToUpdate.sale_status_reason_id = 0; // o un valor especial que indique que no hay un motivo de estado de venta válido
+        saleDataToUpdate.sale_status_reason_id = 0;
       }
     } else {
       if (!sale_status_reason_id) {
-        throw new Error('El motivo de estado de venta es requerido');
+        return error({ message: 'El motivo de estado de venta es requerido' });
       }
+
+      const saleStatusReason = await SaleStatusReason.findOne({
+        where: {
+          sale_status_id: sale_status_id,
+          sale_status_reason_id: sale_status_reason_id,
+        },
+      });
+      
+      if (!saleStatusReason) {
+        return res.status(400).json({ message: 'El motivo de estado de venta no está asociado al estado de venta' });
+      }
+
       saleDataToUpdate.sale_status_reason_id = sale_status_reason_id;
     }
 
@@ -1131,8 +1238,53 @@ export const updateSale = async (req, res) => {
     if ([2, 3, 4, 7].includes(Number(sale_status_id))) filteredUpdatedSaleData.validator_id = userId;
     if ([5, 6, 7].includes(Number(sale_status_id))) filteredUpdatedSaleData.dispatcher_id = userId;
 
+    // Guardar el estado anterior de la venta
+    const oldSaleStatus = sale.sale_status_id;
+    const oldSaleStatusReason = sale.sale_status_reason_id;
+
     // Actualizar la venta
     await sale.update(filteredUpdatedSaleData);
+
+    // Insertar registro en SaleHistory si se actualizó el estado de la venta
+    if (oldSaleStatus !== filteredUpdatedSaleData.sale_status_id) {
+      let dateType = 'Actualizado';
+      
+      // Set specific date_type based on the new sale_status_id
+      switch (Number(filteredUpdatedSaleData.sale_status_id)) {
+        case 2:
+          dateType = 'Validado';
+          break;
+        case 6:
+          dateType = 'Activo';
+          break;
+        case 7:
+          dateType = 'Anulado';
+          break;
+      }
+
+      console.log('Debug - Old status:', oldSaleStatus);
+      console.log('Debug - New status:', filteredUpdatedSaleData.sale_status_id, typeof filteredUpdatedSaleData.sale_status_id);
+      console.log('Debug - Date type:', dateType);
+
+      // Crear un solo registro en SaleHistory
+      await SaleHistory.create({
+        sale_id: saleId,
+        previous_status_id: oldSaleStatus,
+        new_status_id: filteredUpdatedSaleData.sale_status_id,
+        sale_status_reason_id: filteredUpdatedSaleData.sale_status_reason_id,
+        modified_by_user_id: userId,
+        modification_date: new Date(),
+        date_type: dateType,
+        date: new Date(),
+      });
+
+      console.log('Debug - SaleHistory created:', {
+        sale_id: saleId,
+        previous_status_id: oldSaleStatus,
+        new_status_id: filteredUpdatedSaleData.sale_status_id,
+        date_type: dateType,
+      });
+    }
 
     // Actualizar campos específicos basados en el rol
     filteredUpdatedSaleData.modified_by_user_id = userId;
@@ -1146,11 +1298,6 @@ export const updateSale = async (req, res) => {
     };
 
     Object.assign(filteredUpdatedSaleData, roleMap[roleId]);
-
-    // Actualizar el priority_modified_by_user_id si se actualiza el is_priority a 1
-    if (filteredUpdatedSaleData.is_priority === 1) {
-      filteredUpdatedSaleData.priority_modified_by_user_id = userId;
-    }
 
     res.status(200).json({ message: 'Venta actualizada con éxito', sale });
   } catch (error) {
@@ -1179,17 +1326,40 @@ export const updateSalePriority = async (req, res) => {
     }
 
     // Actualizar el is_priority
-    const updatedSaleData = {
-      is_priority,
-      modified_by_user_id: userId,
-    };
+const updatedSaleData = {
+  is_priority,
+  priority_modified_by_user_id: userId,
+};
 
-    // Actualizar el priority_modified_by_user_id si se actualiza el is_priority a 1
-    if (is_priority === 1) {
-      updatedSaleData.priority_modified_by_user_id = userId;
-    }
+console.log('UUUU', userId)
 
-    await sale.update(updatedSaleData);
+await sale.update(updatedSaleData);
+
+// Agregar registro en SaleHistory si se actualiza el is_priority a 1
+if (is_priority === 1) {
+  const lastSaleHistory = await SaleHistory.findOne({
+    where: { sale_id: saleId },
+    order: [['modification_date', 'DESC']],
+  });
+
+  const previousStatusId = lastSaleHistory ? lastSaleHistory.new_status_id : sale.sale_status_id;
+  const newStatusId = lastSaleHistory ? lastSaleHistory.new_status_id : sale.sale_status_id;
+
+  await SaleHistory.create({
+    sale_id: saleId,
+    previous_status_id: previousStatusId,
+    new_status_id: newStatusId,
+    sale_status_reason_id: null,
+    priority_modified_by_user_id: userId,
+    modification_date: new Date(),
+    is_priority: 1,
+    date_type: 'Prioridad',
+    date: new Date(),
+  });
+}
+
+console.log(updatedSaleData.priority_modified_by_user_id);
+
 
     res.status(200).json({ message: 'Venta actualizada con éxito', sale });
   } catch (error) {

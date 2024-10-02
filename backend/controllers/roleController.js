@@ -17,7 +17,7 @@ export const getRoles = async (req, res) => {
       roles = await Role.findAll({ where: { role_id: 3 } });
     } else if (role_id === 4 || role_id === 5) {
       // Si el role_id es 4 o 5, obtener los roles 1, 2, 3 o 4
-      roles = await Role.findAll({ where: { role_id: { [Op.in]: [1, 2, 3, 4] } } });
+      roles = await Role.findAll({ where: { role_id: { [Op.in]: [1, 2, 3, 4, 5] } } });
     } else {
       // Obtener todos los roles si no coincide con las anteriores condiciones
       roles = await Role.findAll();

@@ -2,11 +2,15 @@ import express from 'express';
 const router = express.Router();
 import upload from '../config/multerConfig.js';
 import { exportSales } from '../controllers/exportController.js';
-import { getAllSales , createSale, getSales, getSaleById, getSalesBySearch, updateSale, updateSalePriority, getPromotionsByCommune, getInstallationAmountsByPromotion } from '../controllers/salesController.js';
+import { getAllSales , getSaleHistory , createSale, getSales, getSaleById, getSalesBySearch, updateSale, updateSalePriority, getPromotionsByCommune, getInstallationAmountsByPromotion } from '../controllers/salesController.js';
 import { authenticate, isAnyRole } from '../middlewares/authMiddleware.js';
 
 //get
 router.get('/all', authenticate, isAnyRole(['SuperAdmin', 'Administrador', 'Validador', 'Ejecutivo','Despachador']), getSales);
+
+
+//History
+router.get('/history/:sale_id', getSaleHistory);
 
 // get promotions by commune
 router.get('/promotions/commune/:commune_id', getPromotionsByCommune);

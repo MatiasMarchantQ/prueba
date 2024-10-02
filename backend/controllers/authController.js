@@ -13,13 +13,13 @@ export const login = async (req, res) => {
     const user = await Users.findOne({ where: { email } });
 
     if (!user) {
-      return res.status(404).json({ message: 'Usuario no encontrado' });
+      return res.status(404).json({ message: 'Email no encontrado' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
-      return res.status(400).json({ message: 'Credenciales inválidas' });
+      return res.status(400).json({ message: 'Contraseña  incorrecta' });
     }
 
     const role = await Role.findOne({

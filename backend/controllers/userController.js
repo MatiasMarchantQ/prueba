@@ -36,6 +36,10 @@ export const getAllUsers = async (req, res) => {
     if (role_id) whereClause.role_id = role_id;
     if (status) whereClause.status = status;
 
+    if (req.user.role_id === 2) {
+      whereClause.company_id = req.user.company_id;
+    }
+
     const users = await User.findAll({
       where: whereClause,
       offset: (page - 1) * limit,
@@ -511,7 +515,13 @@ export const updateUserByAdmin = async (req, res) => {
         }
       }
 
-      if (req.body.password) {
+      if (req.body.password && req.body.password !== '') {
+        if (req.body.password.length < 8 || req.body.password.length > 20) {
+          return res.status(400).json({ message: 'La contraseña debe tener entre 8 y 20 caracteres' });
+        }
+        if (!/[a-z]/.test(req.body.password) || !/[A-Z]/.test(req.body.password) || !/\d/.test(req.body.password)) {
+          return res.status(400).json({ message: 'La contraseña debe tener al menos una mayúscula, una minúscula y un número' });
+        }
         const hashedPassword = await bcrypt.hash(req.body.password, 10);
         updates.password = hashedPassword;
       }
