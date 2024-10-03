@@ -1,6 +1,7 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 import SaleHistory from './SaleHistories.js';
+import { now } from 'sequelize/lib/utils';
 
 const Sales = sequelize.define('Sales', {
   sale_id: {
@@ -209,16 +210,12 @@ const Sales = sequelize.define('Sales', {
 }, {
   hooks: {
     afterCreate: async (sale, options) => {
-      const modificationDate = new Date();
-      const chileanDate = modificationDate.toLocaleString('es-CL', {
-        timeZone: 'America/Santiago',
-      });
       await SaleHistory.create({
         sale_id: sale.sale_id,
         new_status_id: sale.sale_status_id,
         sale_status_reason_id: sale.sale_status_reason_id,
         modified_by_user_id: sale.modified_by_user_id,
-        modification_date: chileanDate,
+        modification_date: Date.now(),
         date_type: sale.sale_status_id === 1 ? 'Ingresado' : null,
       });
     }

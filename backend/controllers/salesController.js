@@ -1173,8 +1173,6 @@ export const updateSale = async (req, res) => {
       other_images: allImages.join(',')
     };
 
-    console.log(updatedSaleData)
-
     let allowedFields = [];
     let allowedSaleStatuses = [];
 
@@ -1262,10 +1260,6 @@ export const updateSale = async (req, res) => {
           break;
       }
 
-      console.log('Debug - Old status:', oldSaleStatus);
-      console.log('Debug - New status:', filteredUpdatedSaleData.sale_status_id, typeof filteredUpdatedSaleData.sale_status_id);
-      console.log('Debug - Date type:', dateType);
-
       // Crear un solo registro en SaleHistory
       await SaleHistory.create({
         sale_id: saleId,
@@ -1331,7 +1325,6 @@ const updatedSaleData = {
   priority_modified_by_user_id: userId,
 };
 
-console.log('UUUU', userId)
 
 await sale.update(updatedSaleData);
 
@@ -1357,9 +1350,6 @@ if (is_priority === 1) {
     date: new Date(),
   });
 }
-
-console.log(updatedSaleData.priority_modified_by_user_id);
-
 
     res.status(200).json({ message: 'Venta actualizada con éxito', sale });
   } catch (error) {

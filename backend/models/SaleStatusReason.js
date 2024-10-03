@@ -39,7 +39,11 @@ const SaleStatusReason = sequelize.define('SaleStatusReason', {
       model: 'User',
       key: 'user_id',
     },
-  }
+  },
+  is_active: {
+    type: DataTypes.TINYINT,
+    defaultValue: 1
+  },
 }, {
   tableName: 'salestatusreasons',
   timestamps: false,
