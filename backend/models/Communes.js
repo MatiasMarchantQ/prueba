@@ -11,10 +11,6 @@ const Commune = sequelize.define('Commune', {
     type: DataTypes.STRING(50),
     allowNull: false,
   },
-  commune_code: {
-    type: DataTypes.STRING(10),
-    allowNull: true,
-  },
   region_id: {
     type: DataTypes.INTEGER,
     allowNull: false,
@@ -22,7 +18,6 @@ const Commune = sequelize.define('Commune', {
       model: "Region",
       key: 'region_id',
     },
-    onDelete: 'CASCADE',
     onUpdate: 'CASCADE',
   },
   modified_by_user_id: {
@@ -32,7 +27,6 @@ const Commune = sequelize.define('Commune', {
       model: "User",
       key: 'user_id',
     },
-    onDelete: 'SET NULL',
     onUpdate: 'CASCADE',
   },
   is_active: {

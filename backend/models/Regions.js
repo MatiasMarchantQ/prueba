@@ -22,7 +22,6 @@ const Region = sequelize.define('Region', {
       model: 'User',
       key: 'user_id',
     },
-    onDelete: 'SET NULL',
     onUpdate: 'CASCADE',
   },
 }, {

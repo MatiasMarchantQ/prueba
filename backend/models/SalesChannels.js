@@ -10,9 +10,6 @@ const SalesChannel = sequelize.define('SalesChannel', {
   channel_name: {
     type: DataTypes.STRING(100)
   },
-  description: {
-    type: DataTypes.TEXT
-  },
   created_at: {
     type: DataTypes.DATE,
     allowNull: true,

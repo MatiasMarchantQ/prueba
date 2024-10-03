@@ -16,7 +16,6 @@ const Promotion = sequelize.define('Promotion', {
       model: 'InstallationAmount',
       key: 'installation_amount_id'
     },
-    onDelete: 'CASCADE',
     onUpdate: 'CASCADE'
   },
   modified_by_user_id: {
@@ -25,7 +24,6 @@ const Promotion = sequelize.define('Promotion', {
       model: 'User',
       key: 'user_id'
     },
-    onDelete: 'SET NULL',
     onUpdate: 'CASCADE'
   },
   created_at: {
@@ -43,7 +41,7 @@ const Promotion = sequelize.define('Promotion', {
   is_active: {
     type: DataTypes.TINYINT,
     allowNull: false,
-    defaultValue: 1, // 1 para activo, 0 para inactivo
+    defaultValue: 1,
   },
 }, {
   tableName: 'promotions',

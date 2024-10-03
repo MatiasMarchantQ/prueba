@@ -1,9 +1,23 @@
 // controllers/companyController.js
 import  Company  from '../models/Companies.js';
 
-export const getCompanies = async (req, res) => {
+export const getAllCompanies = async (req, res) => {
   try {
     const companies = await Company.findAll();
+    res.status(200).json(companies);
+  } catch (error) {
+    console.error('Error al obtener todas las empresas:', error);
+    res.status(500).json({ message: 'Error al obtener todas las empresas', error: error.message });
+  }
+};
+
+export const getCompanies = async (req, res) => {
+  try {
+    const companies = await Company.findAll({
+      where: {
+        is_active: 1
+      }
+    });
     res.status(200).json(companies);
   } catch (error) {
     console.error('Error al obtener las empresas:', error);
@@ -17,6 +31,17 @@ export const createCompany = async (req, res) => {
 
     if (!companyName) {
       return res.status(400).json({ message: 'El nombre de la empresa es requerido' });
+    }
+
+    // Verificar si la empresa ya existe
+    const existingCompany = await Company.findOne({
+      where: {
+        company_name: companyName
+      }
+    });
+
+    if (existingCompany) {
+      return res.status(400).json({ message: 'La empresa ya existe' });
     }
 
     const company = await Company.create({ company_name: companyName });
@@ -52,9 +77,14 @@ export const updateCompanyName = async (req, res) => {
 export const toggleCompanyStatus = async (req, res) => {
   try {
     const companyId = req.params.companyId;
+    const { is_active } = req.body;
 
     if (!companyId) {
       return res.status(400).json({ message: 'El ID de la empresa es requerido' });
+    }
+
+    if (is_active === undefined) {
+      return res.status(400).json({ message: 'El estado de la empresa es requerido' });
     }
 
     const company = await Company.findByPk(companyId);
@@ -62,10 +92,9 @@ export const toggleCompanyStatus = async (req, res) => {
       return res.status(404).json({ message: 'Empresa no encontrada' });
     }
 
-    const newStatus = company.is_active ? 0 : 1;
-    await company.update({ is_active: newStatus });
+    await company.update({ is_active });
 
-    res.status(200).json({ message: `Empresa ${newStatus === 1 ? 'habilitada' : 'deshabilitada'} con éxito` });
+    res.status(200).json({ message: `Empresa ${is_active === true ? 'habilitada' : 'deshabilitada'} con éxito` });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error al cambiar el estado de la empresa', error: error.message });

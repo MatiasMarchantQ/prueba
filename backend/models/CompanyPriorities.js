@@ -13,7 +13,6 @@ const CompanyPriority = sequelize.define('CompanyPriority', {
       model: 'Company',
       key: 'company_id'
     },
-    onDelete: 'CASCADE',
     onUpdate: 'CASCADE'
   },
   priority_level: {

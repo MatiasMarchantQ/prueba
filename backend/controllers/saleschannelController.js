@@ -1,8 +1,22 @@
 import SalesChannel from '../models/SalesChannels.js';
 
-export const getSalesChannels = async (req, res) => {
+export const getAllSalesChannels = async (req, res) => {
   try {
     const salesChannels = await SalesChannel.findAll();
+    res.status(200).json(salesChannels);
+  } catch (error) {
+    console.error('Error al obtener todos los canales de venta:', error);
+    res.status(500).json({ message: 'Error al obtener todos los canales de venta', error: error.message });
+  }
+};
+
+export const getSalesChannels = async (req, res) => {
+  try {
+    const salesChannels = await SalesChannel.findAll({
+      where: {
+        is_active: 1
+      }
+    });
     res.status(200).json(salesChannels);
   } catch (error) {
     console.error('Error al obtener los canales de venta:', error);
@@ -18,7 +32,18 @@ export const createSalesChannel = async (req, res) => {
       return res.status(400).json({ message: 'El nombre del canal de venta es requerido' });
     }
 
-    const salesChannel = await SalesChannel.create({ sales_channel_name: salesChannelName });
+    // Verificar si el canal de venta ya existe
+    const existingSalesChannel = await SalesChannel.findOne({
+      where: {
+        channel_name: salesChannelName
+      }
+    });
+
+    if (existingSalesChannel) {
+      return res.status(400).json({ message: 'El canal de venta ya existe' });
+    }
+
+    const salesChannel = await SalesChannel.create({ channel_name: salesChannelName });
     res.status(201).json({ message: 'Canal de venta creado con éxito', salesChannel });
   } catch (error) {
     console.error(error);
@@ -40,7 +65,7 @@ export const updateSalesChannel = async (req, res) => {
       return res.status(404).json({ message: 'Canal de venta no encontrado' });
     }
 
-    await salesChannel.update({ sales_channel_name: salesChannelName });
+    await salesChannel.update({ channel_name: salesChannelName });
     res.status(200).json({ message: 'Nombre del canal de venta actualizado con éxito' });
   } catch (error) {
     console.error(error);

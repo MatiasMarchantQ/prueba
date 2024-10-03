@@ -26,10 +26,10 @@ const PromotionCommune = sequelize.define('PromotionCommune', {
   },
   is_active: {
     type: DataTypes.TINYINT,
-    defaultValue: 1 // Por defecto, la promoción está activa
+    defaultValue: 1 
   }
 }, {
-  tableName: 'promotion_commune',  // Define el nombre de la tabla si es necesario
+  tableName: 'promotion_commune',
   timestamps: false,
   associations: {
     promotion: {

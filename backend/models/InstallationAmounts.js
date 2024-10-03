@@ -25,7 +25,6 @@ const InstallationAmount = sequelize.define('InstallationAmount', {
       model: 'User',
       key: 'user_id'
     },
-    onDelete: 'SET NULL',
     onUpdate: 'CASCADE'
   },
   is_active: {

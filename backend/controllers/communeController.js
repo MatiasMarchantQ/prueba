@@ -15,13 +15,34 @@ export const getCommunesByRegion = async (req, res) => {
     });
     
     if (!communes.length) {
-      return res.status(404).json({ message: 'No communes found for the selected region' });
+      return res.status(404).json({ message: 'No se encontraron comunas para la región seleccionada' });
     }
     
     res.status(200).json(communes);
   } catch (error) {
-    console.error('Error fetching communes:', error);
-    res.status(500).json({ message: 'Error fetching communes', error: error.message });
+    console.error('Error al obtener las comunas:', error);
+    res.status(500).json({ message: 'Error al obtener las comunas', error: error.message });
+  }
+};
+
+export const getAllCommunesByRegion = async (req, res) => {
+  const { regionId } = req.params;
+
+  try {
+    const communes = await Commune.findAll({
+      where: {
+        region_id: regionId
+      }
+    });
+    
+    if (!communes.length) {
+      return res.status(404).json({ message: 'No se encontraron comunas para la región seleccionada' });
+    }
+    
+    res.status(200).json(communes);
+  } catch (error) {
+    console.error('Error al obtener las comunas:', error);
+    res.status(500).json({ message: 'Error al obtener las comunas', error: error.message });
   }
 };
 
@@ -30,26 +51,26 @@ export const addCommuneToRegion = async (req, res) => {
   const { commune_name } = req.body;
 
   if (!commune_name) {
-    return res.status(400).json({ message: 'Commune name is required' });
+    return res.status(400).json({ message: 'El nombre de la comuna es requerido' });
   }
 
   try {
     const region = await Region.findByPk(regionId);
     if (!region) {
-      return res.status(404).json({ message: 'Region not found' });
+      return res.status(404).json({ message: 'Región no encontrada' });
     }
 
     // Verificar si ya existe una comuna asociada a la región seleccionada
     const existingCommune = await Commune.findOne({ where: { region_id: regionId, commune_name } });
     if (existingCommune) {
-      return res.status(400).json({ message: 'Commune already exists for this region' });
+      return res.status(400).json({ message: 'La comuna ya existe para esta región' });
     }
 
     const commune = await Commune.create({ commune_name, region_id: regionId });
-    res.status(201).json({ message: 'Commune added successfully', commune });
+    res.status(201).json({ message: 'Comuna agregada con éxito', commune });
   } catch (error) {
-    console.error('Error adding commune to region:', error);
-    res.status(500).json({ message: 'Error adding commune to region', error: error.message });
+    console.error('Error al agregar la comuna a la región:', error);
+    res.status(500).json({ message: 'Error al agregar la comuna a la región', error: error.message });
   }
 };
 
@@ -60,15 +81,15 @@ export const updateCommune = async (req, res) => {
   try {
     const commune = await Commune.findByPk(communeId);
     if (!commune) {
-      return res.status(404).json({ message: 'Commune not found' });
+      return res.status(404).json({ message: 'Comuna no encontrada' });
     }
 
     await commune.update({ commune_name });
 
-    res.status(200).json({ message: 'Commune updated successfully' });
+    res.status(200).json({ message: 'Comuna actualizada con éxito' });
   } catch (error) {
-    console.error('Error updating commune:', error);
-    res.status(500).json({ message: 'Error updating commune', error: error.message });
+    console.error('Error al actualizar la comuna:', error);
+    res.status(500).json({ message: 'Error al actualizar la comuna', error: error.message });
   }
 };
 
@@ -79,13 +100,17 @@ export const toggleCommuneStatus = async (req, res) => {
   try {
     const commune = await Commune.findByPk(communeId);
     if (!commune) {
-      return res.status(404).json({ message: 'Commune not found' });
+      return res.status(404).json({ message: 'Comuna no encontrada' });
     }
 
     await commune.update({ is_active: isActive });
-    res.status(200).json({ message: `Commune ${isActive ? 'enabled' : 'disabled'} successfully` });
-  } catch (error) {
-    console.error('Error toggling commune status:', error);
-    res.status(500).json({ message: 'Error toggling commune status', error: error.message });
+    if (isActive === "1") {
+      res.status(200).json({ message: 'Comuna habilitada con éxito' });
+    } else {
+      res.status(200).json({ message: 'Comuna deshabilitada con éxito' });
+    }
+   } catch (error) {
+    console.error('Error al cambiar el estado de la comuna:', error);
+    res.status(500).json({ message: 'Error al cambiar el estado de la comuna', error: error.message });
   }
 };
