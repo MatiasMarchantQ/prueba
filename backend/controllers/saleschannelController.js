@@ -76,9 +76,14 @@ export const updateSalesChannel = async (req, res) => {
 export const toggleSalesChannelStatus = async (req, res) => {
   try {
     const salesChannelId = req.params.salesChannelId;
+    const { is_active } = req.body;
 
     if (!salesChannelId) {
       return res.status(400).json({ message: 'El ID del canal de venta es requerido' });
+    }
+
+    if (is_active === undefined || (is_active !== 0 && is_active !== 1)) {
+      return res.status(400).json({ message: 'El estado del canal de venta es requerido y debe ser 0 o 1' });
     }
 
     const salesChannel = await SalesChannel.findByPk(salesChannelId);
@@ -86,10 +91,9 @@ export const toggleSalesChannelStatus = async (req, res) => {
       return res.status(404).json({ message: 'Canal de venta no encontrado' });
     }
 
-    const newStatus = salesChannel.is_active ? 0 : 1;
-    await salesChannel.update({ is_active: newStatus });
+    await salesChannel.update({ is_active });
 
-    res.status(200).json({ message: `Canal de venta ${newStatus === 1 ? 'habilitado' : 'deshabilitado'} con éxito` });
+    res.status(200).json({ message: `Canal de venta ${is_active === 1 ? 'habilitado' : 'deshabilitado'} con éxito` });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error al cambiar el estado del canal de venta', error: error.message });
