@@ -362,7 +362,21 @@ export const getAllSales = async (req) => {
     const { filters } = buildFilterConditions(req.query);
     Object.assign(where, filters);
 
-    const order = await buildOrderConditions(roleId, req.query.sortField, req.query.sortOrder);
+    let order = [];
+    if (req.query.sortField && req.query.sortOrder) {
+      const validSortFields = [
+        'created_at', 'sale_id', 'service_id', 'client_first_name', 'client_last_name',
+        'client_rut', 'region_id', 'commune_id', 'promotion_id', 'sale_status_reason_id', 'company_id'
+      ];
+      if (validSortFields.includes(req.query.sortField)) {
+        const sortOrder = req.query.sortOrder.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+        order.push([req.query.sortField, sortOrder]);
+      }
+    }
+
+    // Añadir el orden por defecto después del orden especificado por el usuario
+    const defaultOrder = await buildOrderConditions(roleId);
+    order = order.concat(defaultOrder);
 
     console.log('Orden final para exportación:', order);
 
@@ -378,18 +392,6 @@ export const getAllSales = async (req) => {
       ],
       order: order,
     });
-
-    // Aplicar el ordenamiento manualmente si es necesario
-    if (req.query.sortField && req.query.sortOrder) {
-      const sortField = req.query.sortField;
-      const sortOrder = req.query.sortOrder.toUpperCase();
-      
-      sales.sort((a, b) => {
-        if (a[sortField] < b[sortField]) return sortOrder === 'ASC' ? -1 : 1;
-        if (a[sortField] > b[sortField]) return sortOrder === 'ASC' ? 1 : -1;
-        return 0;
-      });
-    }
 
     return sales;
   } catch (error) {
