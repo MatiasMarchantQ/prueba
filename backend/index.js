@@ -31,6 +31,6 @@ app.use('/api/promotions', promotionRoutes);
 
 app.use('/uploads', express.static('uploads'));
 
-app.listen(3002, () => {
-  console.log('Servidor corriendo en el puerto 3001');
+app.listen(3003, () => {
+  console.log('Servidor corriendo en el puerto 3002');
 });

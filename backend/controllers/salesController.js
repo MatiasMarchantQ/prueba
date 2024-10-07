@@ -145,10 +145,11 @@ export const createSale = async (req, res) => {
     const saleData = createSaleData(reqBody, otherImages ? otherImages : [], currentUser, promotion.installation_amount_id, companyPriority.priority_level);
     const sale = await Sales.create(saleData);
 
-    // Send email notification if the sale is in initial status
+    /* Send email notification if the sale is in initial status
     if (saleData.sale_status_id === 1) {
       await sendEmailNotification(sale, currentUser, reqBody);
     }
+    */
 
     res.status(201).json(sale);
   } catch (error) {
@@ -320,22 +321,20 @@ export const getSaleHistory = async (req, res) => {
   }
 };
 
-
 const getSalesData = async (req) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 30;
   const offset = (page - 1) * limit;
-  const sortField = req.query.sortField;
-  const sortOrder = req.query.sortOrder || 'DESC';
 
   const { company_id: companyId, role_id: roleId, user_id: userId } = req.user;
 
   try {
     const where = buildWhereConditions(roleId, companyId, userId);
-    const filters = buildFilterConditions(req.query);
+    const { filters, order: filterOrder } = buildFilterConditions(req.query);
     Object.assign(where, filters);
 
-    const order = await buildOrderConditions(companyId, roleId, sortField, sortOrder);
+    const defaultOrder = await buildOrderConditions(companyId, roleId);
+    const order = filterOrder.length > 0 ? filterOrder.concat(defaultOrder) : defaultOrder;
     
     const sales = await Sales.findAll({
       limit,
@@ -357,15 +356,15 @@ const getSalesData = async (req) => {
 
 export const getAllSales = async (req) => {
   const { company_id: companyId, role_id: roleId, user_id: userId } = req.user;
-  const sortField = req.query.sortField;
-  const sortOrder = req.query.sortOrder || 'DESC';
 
   try {
     const where = buildWhereConditions(roleId, companyId, userId);
-    const filters = buildFilterConditions(req.query);
+    const { filters } = buildFilterConditions(req.query);
     Object.assign(where, filters);
 
-    const order = await buildOrderConditions(companyId, sortField, sortOrder);
+    const order = await buildOrderConditions(roleId, req.query.sortField, req.query.sortOrder);
+
+    console.log('Orden final para exportación:', order);
 
     const sales = await Sales.findAll({
       where,
@@ -377,30 +376,35 @@ export const getAllSales = async (req) => {
           attributes: ['priority_level'],
         },
       ],
-      order,
+      order: order,
     });
+
+    // Aplicar el ordenamiento manualmente si es necesario
+    if (req.query.sortField && req.query.sortOrder) {
+      const sortField = req.query.sortField;
+      const sortOrder = req.query.sortOrder.toUpperCase();
+      
+      sales.sort((a, b) => {
+        if (a[sortField] < b[sortField]) return sortOrder === 'ASC' ? -1 : 1;
+        if (a[sortField] > b[sortField]) return sortOrder === 'ASC' ? 1 : -1;
+        return 0;
+      });
+    }
 
     return sales;
   } catch (error) {
-    console.error(error);
+    console.error('Error en getAllSales:', error);
     throw error;
   }
 };
 
 export const getSales = async (req, res) => {
   try {
-    const data = await getSalesData(req);
     if (req.query.export === 'true') {
+      // Obtenemos las ventas aplicando el mismo orden que en la visualización
       const sales = await getAllSales(req);
 
-      // Agregar todas las ventas a la hoja de cálculo
-      const allSales = [];
-      for (let i = 1; i <= data.totalPages; i++) {
-        const pageSales = await getSalesData(req, i);
-        allSales.push(...pageSales.sales);
-      }
-
-      const salesExport = allSales.map(sale => {
+      const salesExport = sales.map(sale => {
         const date = new Date(sale.created_at);
         const createdAt = `${date.getFullYear()}-${padZero(date.getMonth() + 1)}-${padZero(date.getDate())} ${padZero(date.getHours())}:${padZero(date.getMinutes())}:${padZero(date.getSeconds())}`;
 
@@ -424,7 +428,7 @@ export const getSales = async (req, res) => {
           additional_comments: sale.additional_comments,
           is_priority: sale.is_priority,
           saleStatus: sale.saleStatus.status_name,
-          reason: sale.reason ? sale.reason.reason_name : '', // Dejar el campo vacío si no hay motivo
+          reason: sale.reason ? sale.reason.reason_name : '',
           company: sale.company.company_name,
           created_at: createdAt
         };
@@ -433,21 +437,20 @@ export const getSales = async (req, res) => {
       const format = req.query.format;
       await exportSales(salesExport, format, res);
     } else {
+      const data = await getSalesData(req);
       res.json(data);
     }
   } catch (error) {
-    console.error(error);
+    console.error('Error in getSales:', error);
     res.status(500).json({ message: 'Error fetching sales' });
   }
 };
 
-function padZero(value) {
-  return (value < 10 ? '0' : '') + value;
-}
-
 const buildFilterConditions = (query) => {
   const filters = {};
+  const order = [];
 
+  // Existing filter logic
   if (query.sales_channel_id) filters.sales_channel_id = query.sales_channel_id;
   if (query.region_id) filters.region_id = query.region_id;
   if (query.commune_id) filters.commune_id = query.commune_id;
@@ -457,14 +460,12 @@ const buildFilterConditions = (query) => {
   if (query.sale_status_id) filters.sale_status_id = query.sale_status_id;
   if (query.sale_status_reason_id) filters.sale_status_reason_id = query.sale_status_reason_id;
   if (query.company_id) filters.company_id = query.company_id;
-  
+
+  // Date range filter
   if (query.start_date) {
-    // No es necesario dividir la fecha ya que el formato es YYYY-MM-DD
-    const startDateFormatted = query.start_date; // Mantener en formato 'aaaa-mm-dd'
-    
+    const startDateFormatted = query.start_date;
     if (query.end_date) {
-      const endDateFormatted = query.end_date; // Mantener en formato 'aaaa-mm-dd'
-      
+      const endDateFormatted = query.end_date;
       filters.created_at = {
         [Op.between]: [new Date(startDateFormatted), new Date(endDateFormatted)]
       };
@@ -474,15 +475,13 @@ const buildFilterConditions = (query) => {
       };
     }
   } else if (query.end_date) {
-    const endDateFormatted = query.end_date; // Mantener en formato 'aaaa-mm-dd'
-    
+    const endDateFormatted = query.end_date;
     filters.created_at = {
       [Op.lte]: new Date(endDateFormatted)
     };
   }
-  
 
-  // Para el filtro de rol, necesitamos incluir el modelo User y su relación con Role
+  // Role-based filters
   if (query.role_id) {
     filters['$executive.role.role_id$'] = query.role_id;
   }
@@ -499,7 +498,20 @@ const buildFilterConditions = (query) => {
     filters['$dispatcher.role.role_id$'] = query.dispatcher_id;
   }
 
-  return filters;
+  // Sorting logic
+  if (query.sortField && query.sortOrder) {
+    const validSortFields = [
+      'created_at', 'sale_id', 'service_id', 'client_first_name', 'client_last_name',
+      'client_rut', 'region_id', 'commune_id', 'promotion_id', 'sale_status_reason_id', 'company_id'
+    ];
+
+    if (validSortFields.includes(query.sortField)) {
+      const sortOrder = query.sortOrder.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+      order.push([query.sortField, sortOrder]);
+    }
+  }
+
+  return { filters, order };
 };
 
 const buildWhereConditions = (roleId, companyId, userId) => {
@@ -523,37 +535,55 @@ const buildWhereConditions = (roleId, companyId, userId) => {
   return where;
 };
 
-const buildOrderConditions = async (roleId, sortField, sortOrder) => {
+export const buildOrderConditions = async (roleId, sortField, sortOrder, filters) => {
   let order = [];
 
-  if (sortField && sortOrder) {
-    // Si se proporciona un campo de ordenamiento, añádelo al principio del array de orden
-    order.unshift([sortField, sortOrder.toUpperCase()]);
-  } else {
-    // Si no se proporciona un campo de ordenamiento, mantén el orden por defecto
-    order.push([Sequelize.literal('CASE WHEN is_priority = 1 THEN 0 ELSE 1 END'), 'ASC']);
-    order.push([Sequelize.literal('CASE WHEN `Sales`.sale_status_id IN (1, 2) THEN 0 ELSE 1 END'), 'ASC']);
-    order.push([{ model: Company, as: 'company' }, 'priority_level', 'ASC']);
-    order.push(['sale_id', 'DESC']);
+  // Definir campos de ordenamiento permitidos
+  const allowedSortFields = [
+    'created_at', 'sale_id', 'service_id', 'client_first_name', 'client_last_name',
+    'client_rut', 'region_id', 'commune_id', 'promotion_id', 'sale_status_reason_id', 'company_id'
+  ];
 
-    switch (roleId) {
-      case 3:
-        order.push([Sequelize.literal('CASE WHEN `Sales`.sale_status_id = 4 THEN 0 WHEN `Sales`.sale_status_id = 1 THEN 1 ELSE 2 END'), 'ASC']);
-        break;
-      case 4:
-        order.push([Sequelize.literal('CASE WHEN `Sales`.sale_status_id = 1 THEN 0 WHEN `Sales`.sale_status_id = 3 THEN 1 ELSE 2 END'), 'ASC']);
-        break;
-      case 5:
-        order.push([Sequelize.literal('CASE WHEN `Sales`.sale_status_id = 2 THEN 0 WHEN `Sales`.sale_status_id = 5 THEN 1 WHEN `Sales`.sale_status_id = 6 THEN 2 ELSE 3 END'), 'ASC']);
-        break;
-      default:
-        order.push([{ model: SaleStatus, as: 'saleStatus' }, 'sale_status_id', 'ASC']);
-        break;
-    }
+  // Si se proporciona un campo de ordenamiento válido, añadirlo al principio del array de orden
+  if (sortField && sortOrder && allowedSortFields.includes(sortField)) {
+    order.push([sortField, sortOrder.toUpperCase()]);
+  }
+
+  // Añadir condiciones de ordenamiento adicionales
+  order = order.concat([
+    [Sequelize.literal('CASE WHEN is_priority = 1 THEN 0 ELSE 1 END'), 'ASC'],
+    [Sequelize.literal('CASE WHEN `Sales`.sale_status_id IN (1, 2) THEN 0 ELSE 1 END'), 'ASC'],
+    [{ model: Company, as: 'company' }, 'priority_level', 'ASC'],
+    ['sale_id', 'DESC']
+  ]);
+
+  // Añadir ordenamiento específico por rol
+  switch (roleId) {
+    case 3: // Ejecutivo
+      order.push([Sequelize.literal('CASE WHEN `Sales`.sale_status_id = 4 THEN 0 WHEN `Sales`.sale_status_id = 1 THEN 1 ELSE 2 END'), 'ASC']);
+      break;
+    case 4: // Admin
+      order.push([Sequelize.literal('CASE WHEN `Sales`.sale_status_id = 1 THEN 0 WHEN `Sales`.sale_status_id = 3 THEN 1 ELSE 2 END'), 'ASC']);
+      break;
+    case 5: // Validador
+      order.push([Sequelize.literal('CASE WHEN `Sales`.sale_status_id = 2 THEN 0 WHEN `Sales`.sale_status_id = 5 THEN 1 WHEN `Sales`.sale_status_id = 6 THEN 2 ELSE 3 END'), 'ASC']);
+      break;
+    default:
+      order.push([{ model: SaleStatus, as: 'saleStatus' }, 'sale_status_id', 'ASC']);
+      break;
+  }
+
+  // Añadir ordenamiento según los filtros
+  if (filters) {
+    Object.keys(filters).forEach((key) => {
+      order.push([key, 'ASC']);
+    });
   }
 
   return order;
 };
+
+
 
 const getSalesIncludes = () => [
   {

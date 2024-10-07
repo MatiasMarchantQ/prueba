@@ -18,7 +18,6 @@ export const getUsersWithRoles = async (req, res) => {
     res.status(500).send('Internal Server Error');
   }
 };
-
 export const getAllUsers = async (req, res) => {
   const { 
     page = 1, 
@@ -26,8 +25,17 @@ export const getAllUsers = async (req, res) => {
     company_id,
     sales_channel_id,
     role_id,
-    status
+    status,
+    search,
+    sort,
+    order = 'asc' // Default order is 'asc'
   } = req.query;
+  
+  const decodedSearch = search ? decodeURIComponent(search) : '';
+  
+  // Si no se especifica el campo de ordenamiento, se utiliza 'user_id' por defecto
+  const defaultSort = 'user_id'; // Cambiar a 'user_id' como valor predeterminado
+  const sortField = sort || defaultSort; // Si 'sort' no está definido, usar 'user_id'
 
   try {
     const whereClause = {};
@@ -39,6 +47,35 @@ export const getAllUsers = async (req, res) => {
     if (req.user.role_id === 2) {
       whereClause.company_id = req.user.company_id;
     }
+
+    if (decodedSearch) {
+      const searchTerms = decodedSearch.split(' ');
+      whereClause[Op.or] = [
+        { first_name: { [Op.like]: `%${decodedSearch}%` } },
+        { last_name: { [Op.like]: `%${decodedSearch}%` } },
+        { rut: { [Op.like]: `%${decodedSearch}%` } },
+        { email: { [Op.like]: `%${decodedSearch}%` } },
+        { phone_number: { [Op.like]: `%${decodedSearch}%` } },
+        { street: { [Op.like]: `%${decodedSearch}%` } },
+        {
+          [Op.and]: [
+            { first_name: { [Op.like]: `%${searchTerms[0]}%` } },
+            { last_name: { [Op.like]: `%${searchTerms.slice(1).join(' ')}%` } }
+          ]
+        }
+      ];
+
+      // Agregar búsqueda por términos individuales
+      searchTerms.forEach(term => {
+        whereClause[Op.or].push(
+          { first_name: { [Op.like]: `%${term}%` } },
+          { last_name: { [Op.like]: `%${term}%` } }
+        );
+      });
+    }
+
+    const totalUsers = await User.count({ where: whereClause });
+    const totalPages = Math.ceil(totalUsers / limit);
 
     const users = await User.findAll({
       where: whereClause,
@@ -87,11 +124,10 @@ export const getAllUsers = async (req, res) => {
           as: 'role',
           attributes: ['role_name']
         }
-      ]
+      ],
+      // Default sorting by 'user_id' ascending, or any other field if provided
+      order: [[sortField, order === 'asc' ? 'ASC' : 'DESC']]
     });
-
-    const totalUsers = await User.count({ where: whereClause });
-    const totalPages = Math.ceil(totalUsers / limit);
 
     res.status(200).json({ 
       message: 'Users found', 
@@ -105,6 +141,7 @@ export const getAllUsers = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 export const getUserById = async (req, res) => {
   const { user_id } = req.params;
