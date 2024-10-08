@@ -313,7 +313,6 @@ export const updateInstallationAmountForPromotion = async (req, res) => {
               model: PromotionCommune,
               as: 'promotionCommunes',
               required: false,
-              where: { is_active: 1 },
               include: [
                 {
                   model: Promotion,
@@ -371,6 +370,7 @@ export const updateInstallationAmountForPromotion = async (req, res) => {
                   promotion: pc.Promotion.promotion,
                   installation_amount_id: pc.Promotion.installation_amount_id,
                   installation_amount: installationAmount ? installationAmount.amount : null,
+                  is_active: pc.is_active,
                 };
               } else {
                 return null;
