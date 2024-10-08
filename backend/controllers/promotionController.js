@@ -297,7 +297,8 @@ export const updateInstallationAmountForPromotion = async (req, res) => {
       const regionId = req.query.region_id ? parseInt(req.query.region_id) : null;
       const communeId = req.query.commune_id ? parseInt(req.query.commune_id) : null;
       const promotionId = req.query.promotion_id ? parseInt(req.query.promotion_id) : null;
-  
+      const installationAmountId = req.query.installation_amount_id ? parseInt(req.query.installation_amount_id) : null;
+
       let whereCondition = {};
       if (regionId) whereCondition.region_id = regionId;
   
@@ -317,7 +318,10 @@ export const updateInstallationAmountForPromotion = async (req, res) => {
                 {
                   model: Promotion,
                   required: false,
-                  where: promotionId ? { promotion_id: promotionId } : {}, // <--- Modificado
+                  where: {
+                    ...(promotionId ? { promotion_id: promotionId } : {}),
+                    ...(installationAmountId ? { installation_amount_id: installationAmountId } : {}),
+                  },
                   include: [
                     {
                       model: InstallationAmount,
@@ -350,6 +354,8 @@ export const updateInstallationAmountForPromotion = async (req, res) => {
         distinct: true
       });
   
+      const installationAmounts = await InstallationAmount.findAll();
+
       const restructuredData = regions.map(region => ({
         region_id: region.region_id,
         region_name: region.region_name,
@@ -359,11 +365,12 @@ export const updateInstallationAmountForPromotion = async (req, res) => {
           promotions: commune.promotionCommunes
             ? commune.promotionCommunes.map(pc => {
               if (pc.Promotion) {
+                const installationAmount = installationAmounts.find(amount => amount.installation_amount_id === pc.Promotion.installation_amount_id);
                 return {
                   promotion_id: pc.Promotion.promotion_id,
                   promotion: pc.Promotion.promotion,
-                  installation_amount_id: pc.Promotion.InstallationAmounts[0]?.installation_amount_id,
-                  installation_amount: pc.Promotion.InstallationAmounts[0]?.amount,
+                  installation_amount_id: pc.Promotion.installation_amount_id,
+                  installation_amount: installationAmount ? installationAmount.amount : null,
                 };
               } else {
                 return null;
