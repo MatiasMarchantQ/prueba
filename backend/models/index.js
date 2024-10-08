@@ -78,11 +78,15 @@ Role.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifiedByUser' }
 
 Region.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifier' });
 
-Commune.belongsTo(Region, { foreignKey: 'region_id', as: 'region' });
-Commune.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifier' });
+Commune.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifierCommune' });
+Region.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifierRegion' });
 
+Region.hasMany(Commune, { foreignKey: 'region_id', as: 'communes' });
+
+Commune.belongsTo(Region, { foreignKey: 'region_id', as: 'region' });
+Commune.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifierUser' });
 Promotion.hasMany(Sales, {foreignKey: 'promotion_id', as: 'sales'});
-Promotion.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifier' });
+Promotion.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifierPromotion' });
 InstallationAmount.belongsTo(Promotion, {
   foreignKey: 'installation_amount_id',
   onDelete: 'CASCADE',
@@ -106,6 +110,9 @@ PromotionCommune.belongsTo(Promotion, {
   foreignKey: 'promotion_id',
   onDelete: 'CASCADE',
 });
+
+Commune.hasMany(PromotionCommune, { foreignKey: 'commune_id', as: 'promotionCommunes' });
+PromotionCommune.belongsTo(Commune, { foreignKey: 'commune_id', as: 'commune' });
 
 export { User, Role, SalesChannel, Company, Region, Commune, Sales, SaleHistory, CompanyPriority, Audit, SaleStatus, InstallationAmount, Promotion, PromotionCommune, SaleStatusReason };
 export default sequelize;

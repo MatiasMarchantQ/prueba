@@ -1,9 +1,8 @@
-import User from '../models/Users.js';
-import Role from '../models/Roles.js';
 import Sale from '../models/Sales.js'
 import Promotion from '../models/Promotions.js';
 import PromotionCommune from '../models/PromotionsCommunes.js';
 import InstallationAmount from '../models/InstallationAmounts.js';
+import Region from '../models/Regions.js';
 import Commune from '../models/Communes.js';
 import { Op } from 'sequelize';
 
@@ -20,7 +19,7 @@ export const getPromotions = async (req, res) => {
               },
               {
                 model: PromotionCommune,
-                as: 'PromotionCommunes', // Update this line to match the alias name
+                as: 'PromotionCommunes',
                 attributes: ['commune_id'],
               },
             ],
@@ -107,7 +106,7 @@ export const getPromotions = async (req, res) => {
       const existingPromotion = await Promotion.findOne({
         where: {
           promotion: {
-            [Op.like]: `%${promotion.toLowerCase()}%`, // Busca con case insensitive
+            [Op.like]: `%${promotion.toLowerCase()}%`,
           },
           installation_amount_id: installationAmountId,
         },
@@ -123,8 +122,8 @@ export const getPromotions = async (req, res) => {
       const newPromotion = await Promotion.create({
         promotion,
         installation_amount_id: installationAmountId,
-        modified_by_user_id: req.user.user_id, // Asigna el ID del usuario que modifica
-        is_active: 1, // Activo por defecto
+        modified_by_user_id: req.user.user_id,
+        is_active: 1,
       });
   
       res.status(201).json({
@@ -288,5 +287,102 @@ export const updateInstallationAmountForPromotion = async (req, res) => {
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: 'Error al deshabilitar promociones' });
+    }
+  };
+  export const getPromotionsAll = async (req, res) => {
+    try {
+      const limit = 100;
+      const offset = req.query.offset ? parseInt(req.query.offset) : 0;
+  
+      const regionId = req.query.region_id ? parseInt(req.query.region_id) : null;
+      const communeId = req.query.commune_id ? parseInt(req.query.commune_id) : null;
+      const promotionId = req.query.promotion_id ? parseInt(req.query.promotion_id) : null;
+  
+      let whereCondition = {};
+      if (regionId) whereCondition.region_id = regionId;
+  
+      let includeConditions = [
+        {
+          model: Commune,
+          as: 'communes',
+          required: false,
+          where: communeId ? { commune_id: communeId } : {},
+          include: [
+            {
+              model: PromotionCommune,
+              as: 'promotionCommunes',
+              required: false,
+              where: { is_active: 1 },
+              include: [
+                {
+                  model: Promotion,
+                  required: false,
+                  where: promotionId ? { promotion_id: promotionId } : {}, // <--- Modificado
+                  include: [
+                    {
+                      model: InstallationAmount,
+                      attributes: ['installation_amount_id', 'amount'],
+                      required: false,
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ];
+  
+      const regions = await Region.findAll({
+        where: whereCondition,
+        include: includeConditions,
+        order: [
+          ['region_id', 'ASC'],
+          [{ model: Commune, as: 'communes' }, 'commune_name', 'ASC'],
+          [{ model: Commune, as: 'communes' }, { model: PromotionCommune, as: 'promotionCommunes' }, { model: Promotion, as: 'Promotion' }, 'promotion_id', 'ASC'],
+        ],
+        limit,
+        offset,
+      });
+  
+      const count = await Region.count({
+        where: whereCondition,
+        include: includeConditions,
+        distinct: true
+      });
+  
+      const restructuredData = regions.map(region => ({
+        region_id: region.region_id,
+        region_name: region.region_name,
+        communes: region.communes.map(commune => ({
+          commune_id: commune.commune_id,
+          commune_name: commune.commune_name,
+          promotions: commune.promotionCommunes
+            ? commune.promotionCommunes.map(pc => {
+              if (pc.Promotion) {
+                return {
+                  promotion_id: pc.Promotion.promotion_id,
+                  promotion: pc.Promotion.promotion,
+                  installation_amount_id: pc.Promotion.InstallationAmounts[0]?.installation_amount_id,
+                  installation_amount: pc.Promotion.InstallationAmounts[0]?.amount,
+                };
+              } else {
+                return null;
+              }
+            }).filter(Boolean)
+            : [],
+        })),
+      }));
+  
+      res.status(200).json({
+        data: restructuredData,
+        pagination: {
+          limit,
+          offset,
+          total: count,
+        },
+      });
+    } catch (error) {
+      console.error('Error fetching regions with communes and promotions:', error);
+      res.status(500).json({ message: 'Error fetching data', error: error.message });
     }
   };

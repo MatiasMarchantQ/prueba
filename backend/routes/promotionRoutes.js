@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { addPromotionWithInstallationAmount, getPromotionsByUser, getInstallationAmountsByUser , editPromotion, getInstallationAmounts, getPromotions, updateInstallationAmountForPromotion, assignPromotionsToCommune, disablePromotionsForCommune, updateInstallationAmount} from '../controllers/promotionController.js';
+import { getPromotionsAll, addPromotionWithInstallationAmount, getPromotionsByUser, getInstallationAmountsByUser , editPromotion, getInstallationAmounts, getPromotions, updateInstallationAmountForPromotion, assignPromotionsToCommune, disablePromotionsForCommune, updateInstallationAmount} from '../controllers/promotionController.js';
 import { authenticate } from '../middlewares/authMiddleware.js'; // Asegúrate de importar el middleware de autenticación
 
 const router = Router();
@@ -14,6 +14,8 @@ router.get('/installationAmountsByUser', authenticate, getInstallationAmountsByU
 //Devuelve la cantidad de instalaciones por una promocion especifica
 router.get('/installation-amounts', authenticate, getInstallationAmounts);
 
+//Devuelve todas las promociones, comunas y regiones
+router.get('/all', authenticate, getPromotionsAll);
 
 
 //Actualiza el monto de instalacion para una promocion especifica. El :promotionId es la promo a actualizar
