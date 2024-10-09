@@ -69,8 +69,8 @@ CompanyPriority.hasMany(Sales, { foreignKey: 'company_id' });
 
 Sales.belongsTo(SaleStatus, { foreignKey: 'sale_status_id', as: 'saleStatus' });
 SaleStatusReason.hasMany(Sales, { foreignKey: 'sale_status_id', as: 'sale' });
+Sales.hasMany(SaleHistory, { as: 'saleStatuses', foreignKey: 'sale_id' });
 
-// Definir la relación entre SaleStatus y SaleStatusReason
 SaleStatusReason.belongsTo(SaleStatus, { foreignKey: 'sale_status_id', as: 'saleStatusParent' });
 Sales.belongsTo(SaleStatusReason, { foreignKey: 'sale_status_reason_id', as: 'reason' });
 SaleStatus.hasMany(SaleStatusReason, { foreignKey: 'sale_status_id', as: 'saleStatusReasons' });
