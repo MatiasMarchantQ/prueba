@@ -373,24 +373,49 @@ const ventasPorEstadoPorMesOrdenado = Object.entries(ventasPorEstadoPorMes)
       }
     });
 
-    // Generar array de los últimos 12 meses
+    // Generar array de los últimos 12 meses (más reciente primero)
     const ultimos12Meses = [];
     for (let i = 0; i < 12; i++) {
         const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
-        ultimos12Meses.unshift(formatearFecha(fecha));
+        ultimos12Meses.push(formatearFecha(fecha));
     }
 
     // Crear el objeto final ordenado
-    const ventasPorEmpresaMesOrdenado = {};
-    Object.keys(ventasPorEmpresaMes).sort().forEach(empresa => {
-        ventasPorEmpresaMesOrdenado[empresa] = {};
-        ultimos12Meses.forEach(mes => {
-            ventasPorEmpresaMesOrdenado[empresa][mes] = 
-                ventasPorEmpresaMes[empresa][mes] || { total: 0, ...Object.values(statusIdToName).reduce((acc, estado) => ({...acc, [estado]: 0}), {}) };
-        });
-    });
+const ventasPorEmpresaMesOrdenado = {};
 
-    statistics.ventasPorEmpresaMes = ventasPorEmpresaMesOrdenado;
+// Ordenar las empresas, colocando primero la que contenga "Ingbell"
+const empresasOrdenadas = Object.keys(ventasPorEmpresaMes).sort((a, b) => {
+    if (a.includes("Ingbell")) return -1;
+    if (b.includes("Ingbell")) return 1;
+    return a.localeCompare(b);
+});
+
+empresasOrdenadas.forEach(empresa => {
+    ventasPorEmpresaMesOrdenado[empresa] = {};
+    ultimos12Meses.forEach(mes => {
+        if (ventasPorEmpresaMes[empresa] && ventasPorEmpresaMes[empresa][mes]) {
+            ventasPorEmpresaMesOrdenado[empresa][mes] = ventasPorEmpresaMes[empresa][mes];
+        } else {
+            ventasPorEmpresaMesOrdenado[empresa][mes] = {
+                total: 0,
+                ...Object.values(statusIdToName).reduce((acc, estado) => ({...acc, [estado]: 0}), {})
+            };
+        }
+    });
+});
+
+// Ordenar los meses de más reciente a más antiguo para cada empresa
+Object.keys(ventasPorEmpresaMesOrdenado).forEach(empresa => {
+    ventasPorEmpresaMesOrdenado[empresa] = Object.fromEntries(
+        Object.entries(ventasPorEmpresaMesOrdenado[empresa]).sort((a, b) => {
+            const fechaA = new Date(a[0].split(' ')[1], nombresMeses.indexOf(a[0].split(' ')[0]));
+            const fechaB = new Date(b[0].split(' ')[1], nombresMeses.indexOf(b[0].split(' ')[0]));
+            return fechaB - fechaA;
+        })
+    );
+});
+
+statistics.ventasPorEmpresaMes = ventasPorEmpresaMesOrdenado;
 
 // Ventas por promoción
 // Función para obtener la clave del mes (Nombre Mes Año)

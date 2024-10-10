@@ -19,7 +19,7 @@ export const login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
-      return res.status(400).json({ message: 'Contraseña  incorrecta' });
+      return res.status(400).json({ message: 'Credenciales inválidas' });
     }
 
     const role = await Role.findOne({
@@ -29,9 +29,9 @@ export const login = async (req, res) => {
 
     let expiresIn;
     if (rememberMe) {
-      expiresIn = '7d';
+      expiresIn = '7d'; // 7 días
     } else {
-      expiresIn = '1h';
+      expiresIn = '1h'; // 1 hora
     }
 
     const token = jwt.sign({
@@ -42,7 +42,7 @@ export const login = async (req, res) => {
     }, process.env.SECRET_KEY, { expiresIn });
 
     res.status(200).json({
-      message: 'Acceso exitoso',
+      message: 'Login exitoso',
       token,
       user: {
         first_name: user.first_name,
@@ -64,6 +64,7 @@ export const logout = async (req, res) => {
 
   try {
     jwt.verify(tokenValue, process.env.SECRET_KEY, { algorithms: ['HS256'] });
+    // Aquí podrías implementar lógica para invalidar el token si es necesario
     res.status(200).json({ message: 'Sesión cerrada con éxito' });
   } catch (err) {
     console.error(err);
@@ -153,7 +154,7 @@ export const resetPassword = async (req, res) => {
   const { password, confirmPassword } = req.body;
 
   if (password !== confirmPassword) {
-    return res.status(400).json({ message: 'Las contraseñas no coinciden' });
+    return res.status(400).json({ message: 'Passwords do not match' });
   }
 
   try {
@@ -162,7 +163,7 @@ export const resetPassword = async (req, res) => {
     const user = await Users.findOne({ where: { user_id: decoded.user_id } });
 
     if (!user) {
-      return res.status(404).json({ message: 'Usuario no encontrado' });
+      return res.status(404).json({ message: 'User not found' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
