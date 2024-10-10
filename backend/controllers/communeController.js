@@ -10,7 +10,7 @@ export const getCommunesByRegion = async (req, res) => {
     const communes = await Commune.findAll({
       where: {
         region_id: regionId,
-        is_active: 1 // Solo obtener comunas con is_active === 1
+        is_active: 1
       }
     });
     

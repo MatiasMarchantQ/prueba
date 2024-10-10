@@ -1,11 +1,18 @@
 import { Router } from 'express';
-import { getPromotionsAll, addPromotionWithInstallationAmount, getPromotionsByUser, getInstallationAmountsByUser , editPromotion, getInstallationAmounts, getPromotions, updateInstallationAmountForPromotion, assignPromotionsToCommune, disablePromotionsForCommune, updateInstallationAmount} from '../controllers/promotionController.js';
+import { getPromotionsAll, getCommuneDetails, updateCommuneDetails, addPromotionWithInstallationAmount, getPromotionsByUser, getInstallationAmountsByUser , editPromotion, getInstallationAmounts, getPromotions, updateInstallationAmountForPromotion, assignPromotionsToCommune, disablePromotionsForCommune, updateInstallationAmount} from '../controllers/promotionController.js';
 import { authenticate } from '../middlewares/authMiddleware.js'; // Asegúrate de importar el middleware de autenticación
 
 const router = Router();
 
 //Devuelve lista de promociones
 router.get('/', authenticate, getPromotions);
+
+// Obtener detalles de una comuna específica
+router.get('/communes/:communeId', authenticate, getCommuneDetails);
+
+// Actualizar detalles de una comuna específica
+router.patch('/communes/:communeId', authenticate, updateCommuneDetails);
+
 
 router.get('/by-user', authenticate, getPromotionsByUser);
 

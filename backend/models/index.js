@@ -1,5 +1,5 @@
 import { Sequelize } from 'sequelize';
-import config from '../config/config.js'; // Asegúrate de importar correctamente la configuración
+import config from '../config/config.js';
 import User from './Users.js';
 import Role from './Roles.js';
 import SalesChannel from './SalesChannels.js';
@@ -16,7 +16,6 @@ import Promotion from './Promotions.js';
 import PromotionCommune from './PromotionsCommunes.js';
 import SaleStatusReason from './SaleStatusReason.js';
 
-// Instancia única de Sequelize
 const sequelize = new Sequelize(
   config.db.name,
   config.db.user,

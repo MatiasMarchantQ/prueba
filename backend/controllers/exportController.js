@@ -1,6 +1,4 @@
 import ExcelJS from 'exceljs';
-import * as fs from 'fs';
-import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import * as docx from 'docx';
 
@@ -90,7 +88,6 @@ export const exportSales = async (sales, format, filters ,res) => {
       });
 
       const buffer = await workbook.xlsx.writeBuffer();
-      console.log('Enviando archivo Excel...');
       res.set("Content-Disposition", `attachment; filename="ventas.xlsx"`);
       res.set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.send(buffer);
@@ -128,11 +125,10 @@ export const exportSales = async (sales, format, filters ,res) => {
 
   const doc = new docx.Document({
     sections: sections,
-    creator: 'Ingbell SpA',
+    creator: 'Ingbell Chile SpA',
   });
 
   const wordBuffer = await docx.Packer.toBuffer(doc);
-  console.log('Enviando archivo Word...');
   res.set("Content-Disposition", `attachment; filename="ventas.docx"`);
   res.set("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
   res.send(wordBuffer);
@@ -166,7 +162,6 @@ export const exportSales = async (sales, format, filters ,res) => {
         ]);
       });
       const csvBuffer = await csvToBuffer(csv);
-      console.log('Enviando archivo CSV...');
       res.set("Content-Disposition", `attachment; filename="ventas.csv"`);
       res.set("Content-Type", "text/csv");
       res.send(csvBuffer);

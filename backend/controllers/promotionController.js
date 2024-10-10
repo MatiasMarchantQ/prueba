@@ -238,10 +238,10 @@ export const updateInstallationAmountForPromotion = async (req, res) => {
         }
       }));
   
-      res.status(201).json({ message: 'Promotions assigned to commune successfully' });
+      res.status(201).json({ mensaje: 'Promociones asignadas a la comuna exitosamente' });
     } catch (error) {
-      console.error('Error assigning promotions to commune:', error);
-      res.status(500).json({ message: 'Error assigning promotions to commune', error: error.message });
+      console.error('Error al asignar promociones a la comuna:', error);
+      res.status(500).json({ mensaje: 'Error al asignar promociones a la comuna', error: error.message });
     }
   };
 
@@ -291,8 +291,9 @@ export const updateInstallationAmountForPromotion = async (req, res) => {
   };
   export const getPromotionsAll = async (req, res) => {
     try {
-      const limit = 100;
-      const offset = req.query.offset ? parseInt(req.query.offset) : 0;
+      const limit = req.query.limit ? parseInt(req.query.limit) : 100;
+      const page = req.query.page ? parseInt(req.query.page) : 1;
+      const offset = (page - 1) * limit;
   
       const regionId = req.query.region_id ? parseInt(req.query.region_id) : null;
       const communeId = req.query.commune_id ? parseInt(req.query.commune_id) : null;
@@ -335,7 +336,7 @@ export const updateInstallationAmountForPromotion = async (req, res) => {
         }
       ];
   
-      const regions = await Region.findAll({
+      const { count, rows: regions } = await Region.findAndCountAll({
         where: whereCondition,
         include: includeConditions,
         order: [
@@ -345,11 +346,6 @@ export const updateInstallationAmountForPromotion = async (req, res) => {
         ],
         limit,
         offset,
-      });
-  
-      const count = await Region.count({
-        where: whereCondition,
-        include: includeConditions,
         distinct: true
       });
   
@@ -361,6 +357,7 @@ export const updateInstallationAmountForPromotion = async (req, res) => {
         communes: region.communes.map(commune => ({
           commune_id: commune.commune_id,
           commune_name: commune.commune_name,
+          is_active: commune.is_active,
           promotions: commune.promotionCommunes
             ? commune.promotionCommunes.map(pc => {
               if (pc.Promotion) {
@@ -380,16 +377,152 @@ export const updateInstallationAmountForPromotion = async (req, res) => {
         })),
       }));
   
+      const totalPages = Math.ceil(count / limit);
+  
       res.status(200).json({
         data: restructuredData,
         pagination: {
           limit,
-          offset,
+          page,
           total: count,
+          totalPages,
         },
       });
     } catch (error) {
-      console.error('Error fetching regions with communes and promotions:', error);
-      res.status(500).json({ message: 'Error fetching data', error: error.message });
+      res.status(500).json({ message: 'Error al obtener datos', error: error.message });
+    }
+  };
+
+  export const getCommuneDetails = async (req, res) => {
+    try {
+      const { communeId } = req.params;
+  
+      const commune = await Commune.findOne({
+        where: { commune_id: communeId },
+        attributes: ['commune_id', 'commune_name',  'is_active'],
+        include: [
+          {
+            model: Region,
+            as: 'region',
+            attributes: ['region_id', 'region_name'],
+          },
+          {
+            model: PromotionCommune,
+            as: 'promotionCommunes',
+            include: [
+              {
+                model: Promotion,
+                attributes: ['promotion_id', 'promotion', 'installation_amount_id'],
+              },
+            ],
+          },
+        ],
+      });
+  
+      if (!commune) {
+        return res.status(404).json({ message: 'Comuna no encontrada' });
+      }
+  
+      // Obtener todos los montos de instalación
+      const installationAmounts = await InstallationAmount.findAll();
+      const installationAmountMap = new Map(installationAmounts.map(ia => [ia.installation_amount_id, ia.amount]));
+  
+      const formattedResponse = {
+        commune_id: commune.commune_id,
+        commune_name: commune.commune_name,
+        is_active: commune.is_active,
+        region: {
+          region_id: commune.region.region_id,
+          region_name: commune.region.region_name,
+        },
+        current_promotions: commune.promotionCommunes.map(pc => ({
+          promotion_id: pc.Promotion.promotion_id,
+          promotion: pc.Promotion.promotion,
+          installation_amount_id: pc.Promotion.installation_amount_id,
+          installation_amount: installationAmountMap.get(pc.Promotion.installation_amount_id) || null,
+          is_active: pc.is_active,
+        })),
+      };
+  
+      res.status(200).json(formattedResponse);
+    } catch (error) {
+      console.error('Error al obtener detalles de edición de la comuna:', error);
+      res.status(500).json({ message: 'Error al obtener detalles de edición de la comuna', error: error.message });
+    }
+  };
+  
+  export const updateCommuneDetails = async (req, res) => {
+    try {
+      const { communeId } = req.params;
+      const { commune_name, promotions, is_active } = req.body;
+  
+      // 1. Buscar la comuna
+      const commune = await Commune.findByPk(communeId);
+      if (!commune) {
+        return res.status(404).json({ message: 'Comuna no encontrada' });
+      }
+  
+      // 2. Actualizar el nombre y el estado de la comuna
+      const updateData = {};
+      if (commune_name !== undefined) {
+        updateData.commune_name = commune_name;
+      }
+      if (is_active !== undefined) {
+        updateData.is_active = is_active ? 1 : 0;
+      }
+      if (Object.keys(updateData).length > 0) {
+        await commune.update(updateData);
+      }
+  
+      // 3. Actualizar promociones y montos de instalación
+      if (promotions && Array.isArray(promotions)) {
+        for (const promo of promotions) {
+          const { promotion_id, promotion, installation_amount_id, installation_amount, is_active: promo_is_active } = promo;
+  
+          // Verificar si la promoción existe
+          let promotionRecord = await Promotion.findByPk(promotion_id);
+          
+          if (promotionRecord) {
+            // Si existe, actualizarla
+            await promotionRecord.update({ 
+              promotion,
+              installation_amount_id
+            });
+          } else {
+            // Si no existe, crearla
+            promotionRecord = await Promotion.create({
+              promotion_id,
+              promotion,
+              installation_amount_id
+            });
+          }
+  
+          // Actualizar el monto de instalación
+          if (installation_amount_id && installation_amount !== undefined) {
+            await InstallationAmount.upsert({
+              installation_amount_id,
+              amount: installation_amount
+            });
+          }
+  
+          // Actualizar o crear la asociación PromotionCommune
+          await PromotionCommune.upsert({
+            promotion_id: promotionRecord.promotion_id,
+            commune_id: communeId,
+            is_active: promo_is_active !== undefined ? promo_is_active : true
+          });
+        }
+      }
+  
+      res.status(200).json({ 
+        message: 'Detalles de la comuna actualizados con éxito',
+        commune: {
+          commune_id: commune.commune_id,
+          commune_name: commune.commune_name,
+          is_active: commune.is_active
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Error al actualizar detalles de la comuna', error: error.message });
     }
   };

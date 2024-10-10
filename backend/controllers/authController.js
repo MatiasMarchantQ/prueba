@@ -29,9 +29,9 @@ export const login = async (req, res) => {
 
     let expiresIn;
     if (rememberMe) {
-      expiresIn = '7d'; // 7 días
+      expiresIn = '7d';
     } else {
-      expiresIn = '1h'; // 1 hora
+      expiresIn = '1h';
     }
 
     const token = jwt.sign({
@@ -42,7 +42,7 @@ export const login = async (req, res) => {
     }, process.env.SECRET_KEY, { expiresIn });
 
     res.status(200).json({
-      message: 'Login exitoso',
+      message: 'Acceso exitoso',
       token,
       user: {
         first_name: user.first_name,
@@ -64,7 +64,6 @@ export const logout = async (req, res) => {
 
   try {
     jwt.verify(tokenValue, process.env.SECRET_KEY, { algorithms: ['HS256'] });
-    // Aquí podrías implementar lógica para invalidar el token si es necesario
     res.status(200).json({ message: 'Sesión cerrada con éxito' });
   } catch (err) {
     console.error(err);
@@ -154,7 +153,7 @@ export const resetPassword = async (req, res) => {
   const { password, confirmPassword } = req.body;
 
   if (password !== confirmPassword) {
-    return res.status(400).json({ message: 'Passwords do not match' });
+    return res.status(400).json({ message: 'Las contraseñas no coinciden' });
   }
 
   try {
@@ -163,7 +162,7 @@ export const resetPassword = async (req, res) => {
     const user = await Users.findOne({ where: { user_id: decoded.user_id } });
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);

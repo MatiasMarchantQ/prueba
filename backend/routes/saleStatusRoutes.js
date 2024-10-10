@@ -1,6 +1,6 @@
 // routes/roleRoutes.js
 import express from 'express';
-import { getSaleStatuses , getReasons , getSaleStatusesFilters, getAllReasons, createReason , updateReason, toggleReason} from '../controllers/saleStatusController.js';
+import { getSaleStatuses , addOrUpdateReason, getReasons , getReasonsByStatus, getSaleStatusesFilters, getAllReasons, createReason , updateReason, toggleReason} from '../controllers/saleStatusController.js';
 import { authenticate, isAnyRole } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
@@ -14,5 +14,10 @@ router.get('/:saleStatusId/all', authenticate, isAnyRole(['SuperAdmin', 'Adminis
 router.post('/', authenticate, isAnyRole(['SuperAdmin', 'Administrador', 'Ejecutivo', 'Validador','Despachador']), createReason);
 router.put('/:reasonId', authenticate, isAnyRole(['SuperAdmin', 'Administrador', 'Ejecutivo', 'Validador','Despachador']), updateReason);
 router.patch('/:reasonId', authenticate, isAnyRole(['SuperAdmin', 'Administrador', 'Ejecutivo', 'Validador','Despachador']), toggleReason);
+
+router.get('/reasons', getReasonsByStatus);
+router.post('/reasons', authenticate, isAnyRole(['SuperAdmin']), addOrUpdateReason);
+
+
 
 export default router;

@@ -1,4 +1,4 @@
-// routes/communeRoutes.js
+
 import express from 'express';
 import { getCommunesByRegion, getAllCommunesByRegion , addCommuneToRegion, updateCommune , toggleCommuneStatus  } from '../controllers/communeController.js';
 import { authenticate } from '../middlewares/authMiddleware.js';

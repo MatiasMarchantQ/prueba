@@ -201,7 +201,7 @@ const getDashboardStats = async (req, res) => {
     });
 
     // Opcional: Filtrar para mostrar solo las N comunas con más ventas totales
-    const topNComunas = 10; // Ajusta este número según necesites
+    const topNComunas = 10;
     const comunasConMasVentas = Object.entries(ventasPorComunaYMes)
       .map(([comuna, ventas]) => ({
         comuna,
@@ -310,9 +310,9 @@ function obtenerNombreMes(mesNumerico) {
 // Ordenar los meses de más reciente a más antiguo y los estados
 const ventasPorEstadoPorMesOrdenado = Object.entries(ventasPorEstadoPorMes)
   .sort((a, b) => {
-    const [añoA, mesA] = a[0].split('-'); // Invertir el orden de los meses
+    const [añoA, mesA] = a[0].split('-');
     const [añoB, mesB] = b[0].split('-');
-    return new Date(añoB, mesB - 1) - new Date(añoA, mesA - 1); // Invertir el orden de los meses
+    return new Date(añoB, mesB - 1) - new Date(añoA, mesA - 1);
   })
   .reduce((acc, [mes, estados]) => {
     const nombreMes = obtenerNombreMes(mes);
@@ -393,7 +393,6 @@ const ventasPorEstadoPorMesOrdenado = Object.entries(ventasPorEstadoPorMes)
     statistics.ventasPorEmpresaMes = ventasPorEmpresaMesOrdenado;
 
 // Ventas por promoción
-
 // Función para obtener la clave del mes (Nombre Mes Año)
 const obtenerClaveMes = (fecha) => {
   return `${nombresMeses[fecha.getMonth()]} ${fecha.getFullYear()}`;
@@ -423,11 +422,11 @@ sales.forEach((venta) => {
 
     ventasPorPromocion[promocion][claveMes].total++;
 
-    if (estado === 1) { // Ingresado
+    if (estado === 1) {
       ventasPorPromocion[promocion][claveMes].ingresados++;
-    } else if (estado === 6) { // Activo
+    } else if (estado === 6) {
       ventasPorPromocion[promocion][claveMes].activos++;
-    } else if (estado === 7) { // Anulado
+    } else if (estado === 7) {
       ventasPorPromocion[promocion][claveMes].anulados++;
     }
   }
@@ -479,52 +478,52 @@ statistics.ventasPorPromocion = ventasPorPromocionOrdenado;
   statistics.topEjecutivos = topEjecutivos;
 
   // Ventas por mes
-const ventasPorMes = {};
+  const ventasPorMes = {};
 
-sales.forEach((venta) => {
-  const fechaVenta = new Date(venta.created_at);
-  if (fechaVenta >= docesMesesAtras) {
-    const mesVenta = `${nombresMeses[fechaVenta.getMonth()]} ${fechaVenta.getFullYear()}`;
-    const estadoId = venta.sale_status_id;
-    const estadoNombre = statusIdToName[estadoId] || 'Otro';
+  sales.forEach((venta) => {
+    const fechaVenta = new Date(venta.created_at);
+    if (fechaVenta >= docesMesesAtras) {
+      const mesVenta = `${nombresMeses[fechaVenta.getMonth()]} ${fechaVenta.getFullYear()}`;
+      const estadoId = venta.sale_status_id;
+      const estadoNombre = statusIdToName[estadoId] || 'Otro';
 
-    if (!ventasPorMes[mesVenta]) {
-      ventasPorMes[mesVenta] = {
+      if (!ventasPorMes[mesVenta]) {
+        ventasPorMes[mesVenta] = {
+          total: 0,
+          ...Object.values(statusIdToName).reduce((acc, estado) => ({...acc, [estado]: 0}), {})
+        };
+      }
+      
+      ventasPorMes[mesVenta].total++;
+      ventasPorMes[mesVenta][estadoNombre]++;
+    }
+  });
+
+  // Asegurarse de que todos los meses estén representados, incluso si no hay ventas
+  for (let i = 0; i < 12; i++) {
+    const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+    const mesKey = `${nombresMeses[fecha.getMonth()]} ${fecha.getFullYear()}`;
+    if (!ventasPorMes[mesKey]) {
+      ventasPorMes[mesKey] = {
         total: 0,
         ...Object.values(statusIdToName).reduce((acc, estado) => ({...acc, [estado]: 0}), {})
       };
     }
-    
-    ventasPorMes[mesVenta].total++;
-    ventasPorMes[mesVenta][estadoNombre]++;
   }
-});
 
-// Asegurarse de que todos los meses estén representados, incluso si no hay ventas
-for (let i = 0; i < 12; i++) {
-  const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
-  const mesKey = `${nombresMeses[fecha.getMonth()]} ${fecha.getFullYear()}`;
-  if (!ventasPorMes[mesKey]) {
-    ventasPorMes[mesKey] = {
-      total: 0,
-      ...Object.values(statusIdToName).reduce((acc, estado) => ({...acc, [estado]: 0}), {})
-    };
-  }
-}
+  // Ordenar los meses de más reciente a más antiguo
+  const ventasPorMesOrdenado = Object.fromEntries(
+    Object.entries(ventasPorMes).sort((a, b) => {
+      const fechaA = new Date(a[0].split(' ')[1], nombresMeses.indexOf(a[0].split(' ')[0]));
+      const fechaB = new Date(b[0].split(' ')[1], nombresMeses.indexOf(b[0].split(' ')[0]));
+      return fechaB - fechaA;
+    })
+  );
 
-// Ordenar los meses de más reciente a más antiguo
-const ventasPorMesOrdenado = Object.fromEntries(
-  Object.entries(ventasPorMes).sort((a, b) => {
-    const fechaA = new Date(a[0].split(' ')[1], nombresMeses.indexOf(a[0].split(' ')[0]));
-    const fechaB = new Date(b[0].split(' ')[1], nombresMeses.indexOf(b[0].split(' ')[0]));
-    return fechaB - fechaA; // Cambiado el orden de comparación
-  })
-);
-
-statistics.ventasPorMes = ventasPorMesOrdenado;
+  statistics.ventasPorMes = ventasPorMesOrdenado;
 
     // Calcular el promedio para cada mes
-const tiemposDeCierrePorMes = sales.reduce((acumulador, venta) => {
+  const tiemposDeCierrePorMes = sales.reduce((acumulador, venta) => {
   const fechaCreacion = new Date(venta.created_at);
   
   // Solo procesar ventas de los últimos 12 meses
@@ -561,131 +560,129 @@ const tiemposDeCierrePorMes = sales.reduce((acumulador, venta) => {
     if (primerEstado6) {
       const fechaInicio = new Date(primerEstado.modification_date);
       const fechaCierre = new Date(primerEstado6.modification_date);
-      if (fechaCierre <= fechaActual) {
-        const tiempoCierreHoras = (fechaCierre - fechaInicio) / (1000 * 60 * 60); // Convertir a horas
+      
+      if (fechaCierre <= fechaActual && fechaInicio instanceof Date && !isNaN(fechaInicio)) {
+        const tiempoCierreHoras = (fechaCierre - fechaInicio) / (1000 * 60 * 60);
         
         if (!isNaN(tiempoCierreHoras) && tiempoCierreHoras >= 0) {
           acumulador[mesAñoCreacion].tiempos.push(tiempoCierreHoras);
           acumulador[mesAñoCreacion].ventasCerradas++;
-        } else {
-          console.log(`Tiempo de cierre inválido para la venta ID: ${venta.sale_id}`);
         }
       }
     }
   }
   
   return acumulador;
-}, {});
+  }, {});
 
-const promediosTiemposCierrePorMes = Object.entries(tiemposDeCierrePorMes).map(([mes, datos]) => {
+  const promediosTiemposCierrePorMes = Object.entries(tiemposDeCierrePorMes).map(([mes, datos]) => {
   const [año, mesNumero] = mes.split('-');
   const mesNombre = `${nombresMeses[parseInt(mesNumero) - 1]} ${año}`;
   const { tiempos, ventasCerradas, ventasIngresadas, ventasTotales } = datos;
-  let promedio = null;
-  let unidad = 'horas';
+    let promedio = null;
+    let unidad = 'horas';
 
-  // Filtrar los tiempos nulos o indefinidos
-  const tiemposValidos = tiempos.filter(tiempo => tiempo != null && !isNaN(tiempo));
+    // Filtrar los tiempos nulos o indefinidos
+    const tiemposValidos = tiempos.filter(tiempo => tiempo != null && !isNaN(tiempo));
 
-  if (tiemposValidos.length > 0) {
-    const sumaTotal = tiemposValidos.reduce((sum, tiempo) => sum + tiempo, 0);
-    promedio = sumaTotal / tiemposValidos.length;
-    
-    if (promedio >= 24) {
-      promedio /= 24;
-      unidad = 'días';
+    if (tiemposValidos.length > 0) {
+      const sumaTotal = tiemposValidos.reduce((sum, tiempo) => sum + tiempo, 0);
+      promedio = sumaTotal / tiemposValidos.length;
+      
+      if (promedio >= 24) {
+        promedio /= 24;
+        unidad = 'días';
+      }
+      promedio = Number(promedio.toFixed(2));
+    } else {
     }
-    promedio = Number(promedio.toFixed(2));
-  } else {
-    console.log(` No se pudo calcular el promedio para ${mes}. Tiempos válidos: ${tiemposValidos.length}`);
-  }
 
-  return {
-    mes: mesNombre,
-    promedio,
-    unidad,
-    ventasCerradas,
-    ventasIngresadas,
-    ventasTotales
-  };
-});
-
-// Ordenar los meses de más reciente a más antiguo
-promediosTiemposCierrePorMes.sort((a, b) => {
-  const fechaA = new Date(a.mes.split(' ')[1], nombresMeses.indexOf(a.mes.split(' ')[0]));
-  const fechaB = new Date(b.mes.split(' ')[1], nombresMeses.indexOf(b.mes.split(' ')[0]));
-  return fechaB - fechaA;
-});
-
-statistics.tiemposDeCierrePorMes = promediosTiemposCierrePorMes;
-
-   //Ventas por mes por horas
-const obtenerClaveMesDesdeFecha = (fecha) => {
-  const mes = fecha.getMonth();
-  const año = fecha.getFullYear();
-  return `${nombresMeses[mes]} ${año}`;
-};
-
-const ventasPorHoraMes = {};
-ultimos12Meses.forEach(mes => {
-  ventasPorHoraMes[mes] = Array(24).fill(0);
-});
-
-sales.forEach((venta) => {
-  const fechaVenta = new Date(venta.created_at);
-  
-  // Solo procesar ventas de los últimos 12 meses
-  if (fechaVenta >= docesMesesAtras && fechaVenta <= hoy) {
-    const claveMes = obtenerClaveMes(fechaVenta);
-    const horaVenta = fechaVenta.getHours();
-    
-    ventasPorHoraMes[claveMes][horaVenta]++;
-  }
-});
-
-// Filtrar meses que no tienen ventas y agregar las horas
-const ventasPorHoraMesFiltrado = {};
-Object.entries(ventasPorHoraMes).forEach(([claveMes, ventas]) => {
-  const fecha = new Date(claveMes);
-  const mesNombre = obtenerClaveMesDesdeFecha(fecha);
-  if (ventas.some(hora => hora > 0)) {
-    ventasPorHoraMesFiltrado[mesNombre] = ventas.map((cantidad, index) => ({
-      hora: `${index.toString().padStart(2, '0')}:00`,
-      cantidad
-    }));
-  }
-});
-
-// Ordenar los meses de más reciente a más antiguo
-const ventasPorHoraMesOrdenado = Object.fromEntries(
-  Object.entries(ventasPorHoraMesFiltrado).sort((a, b) => {
-    const fechaA = new Date(a[0].split(' ')[1], nombresMeses.indexOf(a[0].split(' ')[0]));
-    const fechaB = new Date(b[0].split(' ')[1], nombresMeses.indexOf(b[0].split(' ')[0]));
-    return fechaB - fechaA;
-  })
-);
-
-// Calcular el total de ventas por hora para todos los meses
-const ventasPorHoraTotal = Array(24).fill(0).map((_, index) => ({
-  hora: `${index.toString().padStart(2, '0')}:00`,
-  cantidad: 0
-}));
-
-Object.values(ventasPorHoraMesOrdenado).forEach(mes => {
-  mes.forEach((venta, hora) => {
-    ventasPorHoraTotal[hora].cantidad += venta.cantidad;
+    return {
+      mes: mesNombre,
+      promedio,
+      unidad,
+      ventasCerradas,
+      ventasIngresadas,
+      ventasTotales
+    };
   });
-});
 
-statistics.ventasPorHoraMes = ventasPorHoraMesOrdenado;
-statistics.ventasPorHoraTotal = ventasPorHoraTotal;
+  // Ordenar los meses de más reciente a más antiguo
+  promediosTiemposCierrePorMes.sort((a, b) => {
+    const fechaA = new Date(a.mes.split(' ')[1], nombresMeses.indexOf(a.mes.split(' ')[0]));
+    const fechaB = new Date(b.mes.split(' ')[1], nombresMeses.indexOf(b.mes.split(' ')[0]));
+    return fechaB - fechaA;
+  });
 
-    res.json(statistics);
+  statistics.tiemposDeCierrePorMes = promediosTiemposCierrePorMes;
 
-  } catch (error) {
-  console.error('Error obteniendo estadisticas', error);
-  res.status(500).json({ message: 'Error obteniendo estadisticas', error: error.message });
+    //Ventas por mes por horas
+  const obtenerClaveMesDesdeFecha = (fecha) => {
+    const mes = fecha.getMonth();
+    const año = fecha.getFullYear();
+    return `${nombresMeses[mes]} ${año}`;
   };
+
+  const ventasPorHoraMes = {};
+  ultimos12Meses.forEach(mes => {
+    ventasPorHoraMes[mes] = Array(24).fill(0);
+  });
+
+  sales.forEach((venta) => {
+    const fechaVenta = new Date(venta.created_at);
+    
+    // Solo procesar ventas de los últimos 12 meses
+    if (fechaVenta >= docesMesesAtras && fechaVenta <= hoy) {
+      const claveMes = obtenerClaveMes(fechaVenta);
+      const horaVenta = fechaVenta.getHours();
+      
+      ventasPorHoraMes[claveMes][horaVenta]++;
+    }
+  });
+
+  // Filtrar meses que no tienen ventas y agregar las horas
+  const ventasPorHoraMesFiltrado = {};
+  Object.entries(ventasPorHoraMes).forEach(([claveMes, ventas]) => {
+    const fecha = new Date(claveMes);
+    const mesNombre = obtenerClaveMesDesdeFecha(fecha);
+    if (ventas.some(hora => hora > 0)) {
+      ventasPorHoraMesFiltrado[mesNombre] = ventas.map((cantidad, index) => ({
+        hora: `${index.toString().padStart(2, '0')}:00`,
+        cantidad
+      }));
+    }
+  });
+
+  // Ordenar los meses de más reciente a más antiguo
+  const ventasPorHoraMesOrdenado = Object.fromEntries(
+    Object.entries(ventasPorHoraMesFiltrado).sort((a, b) => {
+      const fechaA = new Date(a[0].split(' ')[1], nombresMeses.indexOf(a[0].split(' ')[0]));
+      const fechaB = new Date(b[0].split(' ')[1], nombresMeses.indexOf(b[0].split(' ')[0]));
+      return fechaB - fechaA;
+    })
+  );
+
+  // Calcular el total de ventas por hora para todos los meses
+  const ventasPorHoraTotal = Array(24).fill(0).map((_, index) => ({
+    hora: `${index.toString().padStart(2, '0')}:00`,
+    cantidad: 0
+  }));
+
+  Object.values(ventasPorHoraMesOrdenado).forEach(mes => {
+    mes.forEach((venta, hora) => {
+      ventasPorHoraTotal[hora].cantidad += venta.cantidad;
+    });
+  });
+
+  statistics.ventasPorHoraMes = ventasPorHoraMesOrdenado;
+  statistics.ventasPorHoraTotal = ventasPorHoraTotal;
+
+      res.json(statistics);
+
+    } catch (error) {
+    console.error('Error obteniendo estadisticas', error);
+    res.status(500).json({ message: 'Error obteniendo estadisticas', error: error.message });
+    };
 };
 
 export default getDashboardStats;

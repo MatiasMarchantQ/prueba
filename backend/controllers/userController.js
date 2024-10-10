@@ -28,14 +28,14 @@ export const getAllUsers = async (req, res) => {
     status,
     search,
     sort,
-    order = 'asc' // Default order is 'asc'
+    order = 'asc'
   } = req.query;
   
   const decodedSearch = search ? decodeURIComponent(search) : '';
   
   // Si no se especifica el campo de ordenamiento, se utiliza 'user_id' por defecto
-  const defaultSort = 'user_id'; // Cambiar a 'user_id' como valor predeterminado
-  const sortField = sort || defaultSort; // Si 'sort' no está definido, usar 'user_id'
+  const defaultSort = 'user_id';
+  const sortField = sort || defaultSort;
 
   try {
     const whereClause = {};
@@ -125,7 +125,6 @@ export const getAllUsers = async (req, res) => {
           attributes: ['role_name']
         }
       ],
-      // Default sorting by 'user_id' ascending, or any other field if provided
       order: [[sortField, order === 'asc' ? 'ASC' : 'DESC']]
     });
 
@@ -138,7 +137,7 @@ export const getAllUsers = async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Error del servidor' });
   }
 };
 
@@ -198,13 +197,13 @@ export const getUserById = async (req, res) => {
       ]
     });
     if (!user) {
-      res.status(404).json({ message: 'User not found' });
+      res.status(404).json({ message: 'Usuario no encontrado' });
     } else {
-      res.status(200).json({ message: 'User found', user });
+      res.status(200).json({ message: 'Usuario encontrado', user });
     }
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Error del servidor' });
   }
 };
 
@@ -458,7 +457,7 @@ export const changePassword = async (req, res) => {
 
 export const updateUserByAdmin = async (req, res) => {
   try {
-    const currentUserId = req.user.user_id; // ID del usuario que realiza la actualización
+    const currentUserId = req.user.user_id;
     const currentUserRoleId = req.user.role_id;
     const targetUserId = req.params.id;
 
@@ -497,7 +496,7 @@ export const updateUserByAdmin = async (req, res) => {
     // Almacenar el userId que realiza la actualización
     updates.modified_by_user_id = currentUserId;
 
-    if (currentUserRoleId === 1) { // SuperAdmin
+    if (currentUserRoleId === 1) {
       if (updates.email && updates.email !== userToUpdate.email) {
         const existingUserWithEmail = await User.findOne({ where: { email: updates.email } });
         if (existingUserWithEmail) {
@@ -526,7 +525,7 @@ export const updateUserByAdmin = async (req, res) => {
         const hashedPassword = await bcrypt.hash(req.body.password, 10);
         updates.password = hashedPassword;
       }
-    } else if (currentUserRoleId === 2) { // Administrador
+    } else if (currentUserRoleId === 2) {
       if (userToUpdate.company_id !== req.user.company_id) {
         return res.status(403).json({ message: 'No tienes permisos para actualizar este usuario' });
       }

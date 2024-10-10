@@ -46,7 +46,6 @@ const validateInputs = async (reqBody) => {
     throw new Error('No se debe proporcionar un motivo de estado de venta para el estado Ingresado');
   }
 
-  // Resto de las validaciones...
   const promotion = await Promotion.findOne({
     where: {
       promotion_id: promotion_id,
@@ -92,22 +91,14 @@ const validateInputs = async (reqBody) => {
 
 export const createSale = async (req, res) => {
   try {
-    // Normalize the request body
     const reqBody = Object.keys(req.body).reduce((acc, key) => {
       acc[key.trim()] = req.body[key];
       return acc;
     }, {});
 
     const files = req.files; 
-
-    // Handle file renaming for each image type
     const otherImages = files && files.other_images ? handleFileRenaming(files.other_images, reqBody.client_rut) : null;
-
-    // Validate inputs
     const { promotion, installationAmountId } = await validateInputs(reqBody);
-    
- 
-    // Get current user information
     const currentUser = await User.findByPk(req.user.user_id, {
       include: [
         {
@@ -120,8 +111,6 @@ export const createSale = async (req, res) => {
     if (!currentUser) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
-
-    // Get company priority
     const companyPriority = await CompanyPriority.findOne({ 
       where: { company_id: currentUser.company_id }, 
       order: [['priority_level', 'ASC']] 
@@ -129,8 +118,6 @@ export const createSale = async (req, res) => {
     if (!companyPriority) {
       return res.status(404).json({ message: 'Prioridad de empresa no encontrada' });
     }
-
-    // Check for existing RUT and email
     const existingRut = await Sales.findOne({ where: { client_rut: reqBody.client_rut } });
     if (existingRut) {
       return res.status(400).json({ message: 'El RUT ya existe en la base de datos' });
@@ -140,8 +127,6 @@ export const createSale = async (req, res) => {
     if (existingEmail) {
       return res.status(400).json({ message: 'El email ya existe en la base de datos' });
     }
-
-    // Create sale data
     const saleData = createSaleData(reqBody, otherImages ? otherImages : [], currentUser, promotion.installation_amount_id, companyPriority.priority_level);
     const sale = await Sales.create(saleData);
 
@@ -153,8 +138,8 @@ export const createSale = async (req, res) => {
 
     res.status(201).json(sale);
   } catch (error) {
-    console.error('Error details:', error);
-    res.status(500).json({ message: 'Error creating sale', error: error.message });
+    console.error('Detalles de error:', error);
+    res.status(500).json({ message: 'Error creando venta', error: error.message });
   }
 };
 
@@ -215,8 +200,8 @@ const createSaleData = (reqBody, otherImages, currentUser, installationAmountId,
     other_images: otherImages.length > 0 ? otherImages.join(',') : null,
     is_priority: 0,
     priority_modified_by_user_id: null,
-    sale_status_id: 1, // Asegúrate de que siempre es 1
-    sale_status_reason_id: null, // Asegúrate de que siempre es null
+    sale_status_id: 1, // Siempre es 1
+    sale_status_reason_id: null, // Siempre es null
     superadmin_id: currentUser.role_id === 1 ? currentUser.user_id : null,
     admin_id: currentUser.role_id === 2 ? currentUser.user_id : null,
     executive_id: currentUser.role_id === 3 ? currentUser.user_id : null,
@@ -378,8 +363,6 @@ export const getAllSales = async (req) => {
     const defaultOrder = await buildOrderConditions(roleId);
     order = order.concat(defaultOrder);
 
-    console.log('Orden final para exportación:', order);
-
     const sales = await Sales.findAll({
       where,
       include: [
@@ -443,8 +426,8 @@ export const getSales = async (req, res) => {
       res.json(data);
     }
   } catch (error) {
-    console.error('Error in getSales:', error);
-    res.status(500).json({ message: 'Error fetching sales' });
+    console.error('Error obteniendo ventas:', error);
+    res.status(500).json({ message: 'Error obteniendo ventas' });
   }
 };
 
@@ -452,7 +435,6 @@ const buildFilterConditions = (query) => {
   const filters = {};
   const order = [];
 
-  // Existing filter logic
   if (query.sales_channel_id) filters.sales_channel_id = query.sales_channel_id;
   if (query.region_id) filters.region_id = query.region_id;
   if (query.commune_id) filters.commune_id = query.commune_id;
@@ -462,8 +444,6 @@ const buildFilterConditions = (query) => {
   if (query.sale_status_id) filters.sale_status_id = query.sale_status_id;
   if (query.sale_status_reason_id) filters.sale_status_reason_id = query.sale_status_reason_id;
   if (query.company_id) filters.company_id = query.company_id;
-
-  // Date range filter
   if (query.start_date) {
     const startDateFormatted = query.start_date;
     if (query.end_date) {
@@ -483,7 +463,6 @@ const buildFilterConditions = (query) => {
     };
   }
 
-  // Role-based filters
   if (query.role_id) {
     filters['$executive.role.role_id$'] = query.role_id;
   }
@@ -500,7 +479,6 @@ const buildFilterConditions = (query) => {
     filters['$dispatcher.role.role_id$'] = query.dispatcher_id;
   }
 
-  // Sorting logic
   if (query.sortField && query.sortOrder) {
     const validSortFields = [
       'created_at', 'sale_id', 'service_id', 'client_first_name', 'client_last_name',
@@ -525,7 +503,6 @@ const buildWhereConditions = (roleId, companyId, userId) => {
     where.executive_id = userId;
   }
 
-  // Sale status filters based on role
   if (roleId === 3) {
     where.sale_status_id = [1, 4];
   } else if (roleId === 4) {
@@ -1351,7 +1328,6 @@ export const updateSalePriority = async (req, res) => {
       return res.status(403).json({ message: 'No tienes permisos para actualizar la venta' });
     }
 
-    // Actualizar el is_priority
 const updatedSaleData = {
   is_priority,
   priority_modified_by_user_id: userId,
