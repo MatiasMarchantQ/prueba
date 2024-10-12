@@ -1,5 +1,4 @@
 import ExcelJS from 'exceljs';
-import 'jspdf-autotable';
 import * as docx from 'docx';
 
 export const exportSales = async (sales, format, filters ,res) => {

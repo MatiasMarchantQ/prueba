@@ -478,16 +478,13 @@ export const updateInstallationAmountForPromotion = async (req, res) => {
       if (promotions && Array.isArray(promotions)) {
         for (const promo of promotions) {
           const { promotion_id, promotion, installation_amount_id, installation_amount, is_active: promo_is_active } = promo;
-  
+      
           // Verificar si la promoción existe
           let promotionRecord = await Promotion.findByPk(promotion_id);
-          
+      
           if (promotionRecord) {
             // Si existe, actualizarla
-            await promotionRecord.update({ 
-              promotion,
-              installation_amount_id
-            });
+            await promotionRecord.update({ promotion, installation_amount_id });
           } else {
             // Si no existe, crearla
             promotionRecord = await Promotion.create({
@@ -496,33 +493,84 @@ export const updateInstallationAmountForPromotion = async (req, res) => {
               installation_amount_id
             });
           }
-  
+      
           // Actualizar el monto de instalación
-          if (installation_amount_id && installation_amount !== undefined) {
-            await InstallationAmount.upsert({
-              installation_amount_id,
-              amount: installation_amount
+          // if (installation_amount_id && installation_amount !== undefined) {
+          //   await InstallationAmount.upsert({
+          //     installation_amount_id,
+          //     amount: installation_amount
+          //   });
+          // }
+      
+          // Actualizar o crear la asociación PromotionCommune
+          const promotionCommuneRecord = await PromotionCommune.findOne({
+            where: {
+              promotion_id: promotionRecord.promotion_id,
+              commune_id: communeId
+            }
+          });
+                
+
+          if (promotionCommuneRecord) {
+            await promotionCommuneRecord.update({ is_active: promo.is_active ? 1 : 0 });
+          } else {
+            await PromotionCommune.create({
+              promotion_id: promotionRecord.promotion_id,
+              commune_id: communeId,
+              is_active: promo.is_active ? 1 : 0
             });
           }
-  
-          // Actualizar o crear la asociación PromotionCommune
-          await PromotionCommune.upsert({
-            promotion_id: promotionRecord.promotion_id,
-            commune_id: communeId,
-            is_active: promo_is_active !== undefined ? promo_is_active : true
-          });
         }
       }
   
+      // 4. Obtener los detalles actualizados de la comuna
+      const updatedCommune = await Commune.findOne({
+        where: { commune_id: communeId },
+        include: [
+          {
+            model: PromotionCommune,
+            as: 'promotionCommunes',
+            include: [
+              {
+                model: Promotion,
+                include: [
+                  {
+                    model: InstallationAmount,
+                    attributes: ['amount'],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+  
+      // 5. Formatear la respuesta
+      const formattedResponse = {
+        commune_id: updatedCommune.commune_id,
+        commune_name: updatedCommune.commune_name,
+        is_active: updatedCommune.is_active,
+        current_promotions: updatedCommune.promotionCommunes.map(pc => ({
+          promotion_id: pc.Promotion.promotion_id,
+          promotion: pc.Promotion.promotion,
+          installation_amount_id: pc.Promotion.installation_amount_id,
+          installation_amount: pc.Promotion.InstallationAmount ? pc.Promotion.InstallationAmount.amount : null,
+          is_active: pc.is_active,
+        })),
+      };
+  
       res.status(200).json({ 
         message: 'Detalles de la comuna actualizados con éxito',
-        commune: {
-          commune_id: commune.commune_id,
-          commune_name: commune.commune_name,
-          is_active: commune.is_active
-        }
+        commune: formattedResponse
       });
-    } catch (error) {
-      res.status(500).json({ message: 'Error al actualizar detalles de la comuna', error: error.message });
-    }
+    } catch (err) {
+  console.error('Error detallado:', err);
+  if (err.name === 'SequelizeValidationError') {
+    res.status(400).json({ message: 'Error de validación', errors: err.errors });
+  } else if (err.name === 'SequelizeDatabaseError') {
+    res.status(500).json({ message: 'Error de base de datos', error: err.message, sql: err.sql });
+  } else {
+    res.status(500).json({ message: 'Error al actualizar detalles de la comuna', error: err.message });
+  }
+}
   };

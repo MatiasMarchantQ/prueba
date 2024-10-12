@@ -9,7 +9,6 @@ import InstallationAmount from '../models/InstallationAmounts.js';
 import Promotion from '../models/Promotions.js';
 import PromotionCommune from '../models/PromotionsCommunes.js';
 import Company from '../models/Companies.js';
-import CompanyPriority from '../models/CompanyPriorities.js';
 import SaleStatus from '../models/SaleStatuses.js';
 import SaleStatusReason from '../models/SaleStatusReason.js';
 import path from 'path';
@@ -111,13 +110,6 @@ export const createSale = async (req, res) => {
     if (!currentUser) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
-    const companyPriority = await CompanyPriority.findOne({ 
-      where: { company_id: currentUser.company_id }, 
-      order: [['priority_level', 'ASC']] 
-    });
-    if (!companyPriority) {
-      return res.status(404).json({ message: 'Prioridad de empresa no encontrada' });
-    }
     const existingRut = await Sales.findOne({ where: { client_rut: reqBody.client_rut } });
     if (existingRut) {
       return res.status(400).json({ message: 'El RUT ya existe en la base de datos' });
@@ -127,14 +119,14 @@ export const createSale = async (req, res) => {
     if (existingEmail) {
       return res.status(400).json({ message: 'El email ya existe en la base de datos' });
     }
-    const saleData = createSaleData(reqBody, otherImages ? otherImages : [], currentUser, promotion.installation_amount_id, companyPriority.priority_level);
+    const saleData = createSaleData(reqBody, otherImages ? otherImages : [], currentUser, promotion.installation_amount_id);
     const sale = await Sales.create(saleData);
 
-    /* Send email notification if the sale is in initial status
+    // Send email notification if the sale is in initial status
     if (saleData.sale_status_id === 1) {
       await sendEmailNotification(sale, currentUser, reqBody);
     }
-    */
+    
 
     res.status(201).json(sale);
   } catch (error) {
@@ -176,7 +168,7 @@ const handleFileRenaming = (files, clientRut) => {
   }
 };
 
-const createSaleData = (reqBody, otherImages, currentUser, installationAmountId, companyPriorityId) => {
+const createSaleData = (reqBody, otherImages, currentUser, installationAmountId) => {
   const { service_id, client_first_name, client_last_name, client_rut, client_email, client_phone, client_secondary_phone, region_id, commune_id, street, number, department_office_floor, geo_reference, promotion_id, additional_comments } = reqBody;
 
   return {
@@ -208,7 +200,6 @@ const createSaleData = (reqBody, otherImages, currentUser, installationAmountId,
     validator_id: null,
     dispatcher_id: null,
     company_id: currentUser.company_id,
-    company_priority_id: companyPriorityId,
     modified_by_user_id: currentUser.user_id,
   };
 };

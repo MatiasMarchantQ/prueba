@@ -9,7 +9,6 @@ import InstallationAmount from '../models/InstallationAmounts.js';
 import Promotion from '../models/Promotions.js';
 import PromotionCommune from '../models/PromotionsCommunes.js';
 import Company from '../models/Companies.js';
-import CompanyPriority from '../models/CompanyPriorities.js';
 import SaleStatus from '../models/SaleStatuses.js';
 import SaleStatusReason from '../models/SaleStatusReason.js';
 import path from 'path';

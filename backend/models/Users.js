@@ -53,7 +53,7 @@ const User = sequelize.define('User', {
   },
   region_id: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
     references: {
       model: 'Region',
       key: 'region_id',
@@ -61,7 +61,7 @@ const User = sequelize.define('User', {
   },
   commune_id: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
     references: {
       model: 'Commune',
       key: 'commune_id',

@@ -200,13 +200,6 @@ const Sales = sequelize.define('Sales', {
       key: 'company_id',
     },
   },
-  company_priority_id: {
-    type: DataTypes.INTEGER(11),
-    references: {
-      model: 'CompanyPriority',
-      key: 'company_priority_id',
-    },
-  },
 }, {
   hooks: {
     afterCreate: async (sale, options) => {

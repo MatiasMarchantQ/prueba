@@ -247,24 +247,46 @@ export const register = async (req, res) => {
       role_id,
     } = req.body;
 
+    // Verificar rol
     const role = await Role.findByPk(role_id);
     if (!role) {
       return res.status(400).json({ message: 'El rol especificado no existe' });
     }
 
+    // Verificar RUT único
     const existingUserWithRut = await User.findOne({ where: { rut } });
     if (existingUserWithRut) {
       return res.status(400).json({ message: 'El RUT ya está registrado' });
     }
 
+    // Verificar email único
     const existingUserWithEmail = await User.findOne({ where: { email } });
     if (existingUserWithEmail) {
       return res.status(400).json({ message: 'El email ya está registrado' });
     }
 
-    const commune = await Commune.findByPk(commune_id);
-    if (!commune || commune.region_id !== region_id) {
-      return res.status(400).json({ message: 'La comuna no está asociada a la región seleccionada' });
+    // Manejar región y comuna
+    let updateFields = {
+      region_id: null,
+      commune_id: null
+    };
+
+    if (region_id) {
+      const region = await Region.findByPk(region_id);
+      if (!region) {
+        return res.status(400).json({ message: 'La región especificada no existe' });
+      }
+      updateFields.region_id = region_id;
+
+      if (commune_id) {
+        const commune = await Commune.findOne({
+          where: { commune_id, region_id }
+        });
+        if (!commune) {
+          return res.status(400).json({ message: 'La comuna no está asociada a la región seleccionada' });
+        }
+        updateFields.commune_id = commune_id;
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -275,14 +297,13 @@ export const register = async (req, res) => {
       rut,
       email,
       password: hashedPassword,
-      phone_number,
+      phone_number: phone_number || null, 
       sales_channel_id,
       company_id,
-      region_id,
-      commune_id,
-      street,
-      number,
-      department_office_floor,
+      ...updateFields,
+      street: street || null,
+      number: number || null,
+      department_office_floor: department_office_floor || null,
       role_id,
       status: 1,
       must_change_password: true,
@@ -309,6 +330,7 @@ export const registerUserByAdmin = async (req, res) => {
       email,
       password,
       phone_number,
+      sales_channel_id,
       region_id,
       commune_id,
       street,
@@ -336,9 +358,28 @@ export const registerUserByAdmin = async (req, res) => {
       return res.status(400).json({ message: 'El email ya está registrado' });
     }
 
-    const commune = await Commune.findByPk(commune_id);
-    if (!commune || commune.region_id !== region_id) {
-      return res.status(400).json({ message: 'La comuna no está asociada a la región seleccionada' });
+    // Manejar región y comuna
+    let locationFields = {
+      region_id: null,
+      commune_id: null
+    };
+
+    if (region_id) {
+      const region = await Region.findByPk(region_id);
+      if (!region) {
+        return res.status(400).json({ message: 'La región especificada no existe' });
+      }
+      locationFields.region_id = region_id;
+
+      if (commune_id) {
+        const commune = await Commune.findOne({
+          where: { commune_id, region_id }
+        });
+        if (!commune) {
+          return res.status(400).json({ message: 'La comuna no está asociada a la región seleccionada' });
+        }
+        locationFields.commune_id = commune_id;
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -349,13 +390,13 @@ export const registerUserByAdmin = async (req, res) => {
       rut,
       email,
       password: hashedPassword,
-      phone_number,
+      phone_number: phone_number || null,
+      sales_channel_id,
       company_id: adminUser.company_id,
-      region_id,
-      commune_id,
-      street,
-      number,
-      department_office_floor,
+      ...locationFields,
+      street: street || null,
+      number: number || null,
+      department_office_floor: department_office_floor || null,
       role_id,
       status: 1,
       must_change_password: true,
@@ -382,38 +423,50 @@ export const updateMyProfile = async (req, res) => {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
-    // Verifica si el region_id es válido
-    const region = await Region.findByPk(region_id);
-    if (!region) {
-      return res.status(400).json({ message: 'Región no encontrada' });
+    // Objeto para almacenar los campos a actualizar
+    const updateFields = {
+      first_name,
+      last_name,
+      email,
+      phone_number,
+      street,
+      number,
+      department_office_floor,
+      rut
+    };
+
+    // Verifica si se proporcionó region_id
+    if (region_id) {
+      const region = await Region.findByPk(region_id);
+      if (!region) {
+        return res.status(400).json({ message: 'Región no encontrada' });
+      }
+      updateFields.region_id = region_id;
+    } else {
+      // Si no se proporciona region_id, lo establecemos como null
+      updateFields.region_id = null;
+      updateFields.commune_id = null; // También eliminamos la comuna si no hay región
     }
 
-    // Verifica si el commune_id es válido para la región
-    if (commune_id) {
+    // Verifica si se proporcionó commune_id y si hay una región seleccionada
+    if (commune_id && updateFields.region_id) {
       const commune = await Commune.findOne({
         where: {
           commune_id: commune_id,
-          region_id: region_id
+          region_id: updateFields.region_id
         }
       });
       if (!commune) {
         return res.status(400).json({ message: 'La comuna no está asociada a la región seleccionada' });
       }
+      updateFields.commune_id = commune_id;
+    } else {
+      // Si no se proporciona commune_id o no hay región, lo establecemos como null
+      updateFields.commune_id = null;
     }
 
     // Actualiza el usuario
-    await user.update({
-      first_name,
-      last_name,
-      email,
-      phone_number,
-      region_id,
-      commune_id,
-      street,
-      number,
-      department_office_floor,
-      rut
-    });
+    await user.update(updateFields);
 
     res.status(200).json({ message: 'Perfil actualizado con éxito', user });
   } catch (error) {
@@ -468,21 +521,55 @@ export const updateUserByAdmin = async (req, res) => {
 
     const updates = {};
 
+    // Función para validar la contraseña
+    const validatePassword = (password) => {
+      if (password.length < 8 || password.length > 20) {
+        return 'La contraseña debe tener entre 8 y 20 caracteres';
+      }
+      if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/\d/.test(password)) {
+        return 'La contraseña debe tener al menos una mayúscula, una minúscula y un número';
+      }
+      return null;
+    };
+
+    // Función para manejar region_id y commune_id
+    const handleRegionAndCommune = async (updates, req) => {
+      if (req.body.hasOwnProperty('region_id')) {
+        updates.region_id = req.body.region_id;
+        if (updates.region_id === null) {
+          updates.commune_id = null;
+        }
+      }
+    
+      if (req.body.hasOwnProperty('commune_id')) {
+        if (updates.region_id !== null) {
+          if (req.body.commune_id === null || req.body.commune_id === '') {
+            updates.commune_id = null;
+          } else {
+            updates.commune_id = req.body.commune_id;
+            const commune = await Commune.findByPk(updates.commune_id);
+            if (commune && commune.region_id !== updates.region_id) {
+              throw new Error('La comuna no está asociada a la región seleccionada');
+            }
+          }
+        } else {
+          updates.commune_id = null;
+        }
+      }
+    };
+
+    // Actualizar campos básicos
     if (req.body.first_name) updates.first_name = req.body.first_name;
     if (req.body.last_name) updates.last_name = req.body.last_name;
     if (req.body.email) updates.email = req.body.email;
     if (req.body.phone_number) updates.phone_number = req.body.phone_number;
     if (req.body.sales_channel_id) updates.sales_channel_id = req.body.sales_channel_id;
     if (req.body.company_id) updates.company_id = req.body.company_id;
-    if (req.body.region_id) updates.region_id = req.body.region_id;
-    if (req.body.commune_id) updates.commune_id = req.body.commune_id;
     if (req.body.street) updates.street = req.body.street;
     if (req.body.number) updates.number = req.body.number;
     if (req.body.department_office_floor) updates.department_office_floor = req.body.department_office_floor;
     if (req.body.rut) updates.rut = req.body.rut;
-    if (req.body.role_id) {
-      updates.role_id = req.body.role_id;
-    }
+    if (req.body.role_id) updates.role_id = req.body.role_id;
 
     // Convertir status a número
     if (typeof req.body.status !== 'undefined') {
@@ -496,7 +583,7 @@ export const updateUserByAdmin = async (req, res) => {
     // Almacenar el userId que realiza la actualización
     updates.modified_by_user_id = currentUserId;
 
-    if (currentUserRoleId === 1) {
+    if (currentUserRoleId === 1 || currentUserRoleId === 2) {
       if (updates.email && updates.email !== userToUpdate.email) {
         const existingUserWithEmail = await User.findOne({ where: { email: updates.email } });
         if (existingUserWithEmail) {
@@ -511,55 +598,21 @@ export const updateUserByAdmin = async (req, res) => {
         }
       }
 
-      if (updates.commune_id) {
-        const commune = await Commune.findByPk(updates.commune_id);
-        if (!commune || commune.region_id !== updates.region_id) {
-          return res.status(400).json({ message: 'La comuna no está asociada a la región seleccionada' });
-        }
-      }
-
       if (req.body.password && req.body.password !== '') {
-        if (req.body.password.length < 8) {
-          return res.status(400).json({ message: 'La contraseña debe tener al menos 8 caracteres' });
+        const passwordError = validatePassword(req.body.password);
+        if (passwordError) {
+          return res.status(400).json({ message: passwordError });
         }
         const hashedPassword = await bcrypt.hash(req.body.password, 10);
         updates.password = hashedPassword;
       }
-    } else if (currentUserRoleId === 2) {
-      if (userToUpdate.company_id !== req.user.company_id) {
+
+      if (req.body.hasOwnProperty('region_id') || req.body.hasOwnProperty('commune_id')) {
+        await handleRegionAndCommune(updates, req);
+      }
+
+      if (currentUserRoleId === 2 && userToUpdate.company_id !== req.user.company_id) {
         return res.status(403).json({ message: 'No tienes permisos para actualizar este usuario' });
-      }
-
-      if (updates.email && updates.email !== userToUpdate.email) {
-        const existingUserWithEmail = await User.findOne({ where: { email: updates.email } });
-        if (existingUserWithEmail) {
-          return res.status(400).json({ message: 'El email ya está registrado' });
-        }
-      }
-
-      if (updates.rut && updates.rut !== userToUpdate.rut) {
-        const existingUserWithRut = await User.findOne({ where: { rut: updates.rut } });
-        if (existingUserWithRut) {
-          return res.status(400).json({ message: 'El RUT ya está registrado' });
-        }
-      }
-
-      if (updates.commune_id) {
-        const commune = await Commune.findByPk(updates.commune_id);
-        if (!commune || commune.region_id !== updates.region_id) {
-          return res.status(400).json({ message: 'La comuna no está asociada a la reg ión seleccionada' });
-        }
-      }
-
-      if (req.body.password && req.body.password !== '') {
-        if (req.body.password.length < 8 || req.body.password.length > 20) {
-          return res.status(400).json({ message: 'La contraseña debe tener entre 8 y 20 caracteres' });
-        }
-        if (!/[a-z]/.test(req.body.password) || !/[A-Z]/.test(req.body.password) || !/\d/.test(req.body.password)) {
-          return res.status(400).json({ message: 'La contraseña debe tener al menos una mayúscula, una minúscula y un número' });
-        }
-        const hashedPassword = await bcrypt.hash(req.body.password, 10);
-        updates.password = hashedPassword;
       }
     }
 

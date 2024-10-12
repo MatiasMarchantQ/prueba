@@ -64,7 +64,6 @@ export const logout = async (req, res) => {
 
   try {
     jwt.verify(tokenValue, process.env.SECRET_KEY, { algorithms: ['HS256'] });
-    // Aquí podrías implementar lógica para invalidar el token si es necesario
     res.status(200).json({ message: 'Sesión cerrada con éxito' });
   } catch (err) {
     console.error(err);
@@ -119,22 +118,25 @@ export const forgotPassword = async (req, res) => {
     const token = jwt.sign({ user_id: user.user_id }, process.env.SECRET_KEY, { expiresIn: '1h' });
 
     const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false,
+      host: 'canalisp.cl',
+      port: 465,
+      secure: true,
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD
+        pass: process.env.EMAIL_PASSWORD,
+      },
+      tls: {
+        rejectUnauthorized: false
       }
     });
 
     const mailOptions = {
-      from: 'noreply.ingbell@gmail.com',
+      from: process.env.EMAIL_USER,
       to: email,
       subject: 'Recuperación de contraseña',
-      text: `Hola ${user.first_name},\n\nPara recuperar tu contraseña, haz clic en el siguiente enlace: http://localhost:3000/resetpassword/${token}\n\nSi no solicitaste esta recuperación, ignora este correo electrónico.\n\nAtentamente,\nTu equipo`
+      text: `Hola ${user.first_name},\n\nPara recuperar tu contraseña, haz clic en el siguiente enlace: https://ventas.canalisp.cl/resetpassword/${token}\n\nSi no solicitaste esta recuperación, ignora este correo electrónico.\n\nAtentamente,\nTu equipo`
     };
-
+    
     transporter.sendMail(mailOptions, (error, info) => {
       if (error) {
         console.error(error);

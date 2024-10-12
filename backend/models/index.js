@@ -8,8 +8,6 @@ import Region from './Regions.js';
 import Commune from './Communes.js';
 import Sales from './Sales.js';
 import SaleHistory from './SaleHistories.js';
-import CompanyPriority from './CompanyPriorities.js';
-import Audit from './Audit.js';
 import SaleStatus from './SaleStatuses.js';
 import InstallationAmount from './InstallationAmounts.js';
 import Promotion from './Promotions.js';
@@ -36,9 +34,6 @@ User.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
 User.belongsTo(Region, { foreignKey: 'region_id', as: 'region' });
 User.belongsTo(Commune, { foreignKey: 'commune_id', as: 'commune' });
 User.hasMany(Sales, { foreignKey: 'executive_id' });
-
-Audit.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
-
 SaleHistory.belongsTo(Sales, { foreignKey: 'sale_id', as: 'sale' });
 SaleHistory.belongsTo(SaleStatus, { foreignKey: 'previous_status_id', as: 'previousStatus' });
 SaleHistory.belongsTo(SaleStatus, { foreignKey: 'new_status_id', as: 'newStatus' });
@@ -62,8 +57,6 @@ Sales.belongsTo(User, { foreignKey: 'admin_id', as: 'admin' });
 
 Sales.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifiedByUser' });
 Sales.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
-Sales.belongsTo(CompanyPriority, { foreignKey: 'company_id' });
-CompanyPriority.hasMany(Sales, { foreignKey: 'company_id' });
 
 
 Sales.belongsTo(SaleStatus, { foreignKey: 'sale_status_id', as: 'saleStatus' });
@@ -94,9 +87,6 @@ Promotion.hasMany(InstallationAmount, {
   foreignKey: 'installation_amount_id',
 });
 InstallationAmount.belongsTo(User, { foreignKey: 'modified_by_user_id', as: 'modifier' });
-
-CompanyPriority.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
-
 PromotionCommune.belongsTo(Promotion, { foreignKey: 'promotion_id' });
 PromotionCommune.belongsTo(Commune, { foreignKey: 'commune_id' });
 
@@ -113,5 +103,5 @@ PromotionCommune.belongsTo(Promotion, {
 Commune.hasMany(PromotionCommune, { foreignKey: 'commune_id', as: 'promotionCommunes' });
 PromotionCommune.belongsTo(Commune, { foreignKey: 'commune_id', as: 'commune' });
 
-export { User, Role, SalesChannel, Company, Region, Commune, Sales, SaleHistory, CompanyPriority, Audit, SaleStatus, InstallationAmount, Promotion, PromotionCommune, SaleStatusReason };
+export { User, Role, SalesChannel, Company, Region, Commune, Sales, SaleHistory, SaleStatus, InstallationAmount, Promotion, PromotionCommune, SaleStatusReason };
 export default sequelize;

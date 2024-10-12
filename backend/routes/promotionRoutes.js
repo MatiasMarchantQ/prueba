@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { getPromotionsAll, getCommuneDetails, updateCommuneDetails, addPromotionWithInstallationAmount, getPromotionsByUser, getInstallationAmountsByUser , editPromotion, getInstallationAmounts, getPromotions, updateInstallationAmountForPromotion, assignPromotionsToCommune, disablePromotionsForCommune, updateInstallationAmount} from '../controllers/promotionController.js';
-import { authenticate } from '../middlewares/authMiddleware.js'; // Asegúrate de importar el middleware de autenticación
+import { authenticate } from '../middlewares/authMiddleware.js';
 
 const router = Router();
 

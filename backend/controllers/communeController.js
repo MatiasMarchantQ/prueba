@@ -14,10 +14,6 @@ export const getCommunesByRegion = async (req, res) => {
       }
     });
     
-    if (!communes.length) {
-      return res.status(404).json({ message: 'No se encontraron comunas para la región seleccionada' });
-    }
-    
     res.status(200).json(communes);
   } catch (error) {
     console.error('Error al obtener las comunas:', error);
@@ -35,10 +31,7 @@ export const getAllCommunesByRegion = async (req, res) => {
       }
     });
     
-    if (!communes.length) {
-      return res.status(404).json({ message: 'No se encontraron comunas para la región seleccionada' });
-    }
-    
+    // Siempre devolver un 200, incluso si no hay comunas
     res.status(200).json(communes);
   } catch (error) {
     console.error('Error al obtener las comunas:', error);

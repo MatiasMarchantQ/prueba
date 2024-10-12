@@ -7,9 +7,7 @@ import {
     Region, 
     Commune, 
     Sales, 
-    SaleHistory, 
-    CompanyPriority, 
-    Audit, 
+    SaleHistory,
     SaleStatus, 
     InstallationAmount, 
     Promotion 
@@ -111,25 +109,7 @@ import {
       throw new Error('Error fetching sale histories');
     }
   };
-  
-  export const fetchPriorities = async () => {
-    try {
-      return await CompanyPriority.findAll();
-    } catch (error) {
-      console.error('Error fetching priorities:', error);
-      throw new Error('Error fetching priorities');
-    }
-  };
-  
-  export const fetchAudits = async () => {
-    try {
-      return await Audit.findAll();
-    } catch (error) {
-      console.error('Error fetching audits:', error);
-      throw new Error('Error fetching audits');
-    }
-  };
-  
+    
   export const fetchSaleStatuses = async () => {
     try {
       return await SaleStatus.findAll();
@@ -227,7 +207,6 @@ import {
       const sales = await fetchSales();
       const saleHistories = await fetchSaleHistories();
       const priorities = await fetchPriorities();
-      const audits = await fetchAudits();
       const saleStatuses = await fetchSaleStatuses();
       const installationAmounts = await fetchInstallationAmounts();
       const promotions = await fetchPromotions();
@@ -240,7 +219,6 @@ import {
         sales, 
         saleHistories, 
         priorities, 
-        audits, 
         saleStatuses, 
         installationAmounts, 
         promotions 
