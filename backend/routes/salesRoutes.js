@@ -1,12 +1,11 @@
 import express from 'express';
 const router = express.Router();
-import upload from '../config/multerConfig.js';
 import { exportSales } from '../controllers/exportController.js';
-import { getAllSales , getSaleHistory , createSale, getSales, getSaleById, getSalesBySearch, updateSale, updateSalePriority, getPromotionsByCommune, getInstallationAmountsByPromotion } from '../controllers/salesController.js';
+import { getAllSales , getSaleHistory , createSale, getSales, getSaleById, getSalesBySearch, updateSale, updateSalePriority, getPromotionsByCommune, getInstallationAmountsByPromotion, upload} from '../controllers/salesController.js';
 import { authenticate, isAnyRole } from '../middlewares/authMiddleware.js';
 
 //get
-router.get('/all', authenticate, isAnyRole(['SuperAdmin', 'Administrador', 'Validador', 'Ejecutivo','Despachador']), getSales);
+router.get('/all', authenticate, isAnyRole(['SuperAdmin', 'Administrador', 'Validador', 'Ejecutivo','Despachador', 'Consultor']), getSales);
 
 
 //History
@@ -17,9 +16,9 @@ router.get('/promotions/commune/:commune_id', getPromotionsByCommune);
 // get installation amounts by promotion
 router.get('/installation-amounts/promotion/:promotion_id', getInstallationAmountsByPromotion);
 // get por buscador de text
-router.get('/all/search', authenticate, isAnyRole(['SuperAdmin', 'Administrador', 'Validador', 'Ejecutivo','Despachador']), getSalesBySearch);
+router.get('/all/search', authenticate, isAnyRole(['SuperAdmin', 'Administrador', 'Validador', 'Ejecutivo','Despachador', 'Consultor']), getSalesBySearch);
 // get por id
-router.get('/:sale_id', authenticate, isAnyRole(['SuperAdmin', 'Administrador', 'Validador', 'Ejecutivo','Despachador']), getSaleById);
+router.get('/:sale_id', authenticate, isAnyRole(['SuperAdmin', 'Administrador', 'Validador', 'Ejecutivo','Despachador', 'Consultor']), getSaleById);
 
 //patch
 router.put('/update/:sale_id', authenticate, isAnyRole(['SuperAdmin', 'Administrador', 'Ejecutivo', 'Validador', 'Despachador']), upload, updateSale);
@@ -31,7 +30,7 @@ router.put('/update-priority/:sale_id', authenticate, updateSalePriority);
 router.post('/create', authenticate, isAnyRole(['Ejecutivo','SuperAdmin','Administrador']), upload, createSale);
 
 
-router.get('/all/export/:format', authenticate, isAnyRole(['SuperAdmin', 'Administrador', 'Validador', 'Ejecutivo','Despachador']), async (req, res) => {
+router.get('/all/export/:format', authenticate, isAnyRole(['SuperAdmin', 'Administrador', 'Validador', 'Ejecutivo','Despachador', 'Consultor']), async (req, res) => {
   const sales = await getAllSales(req);
   const salesExport = sales.map(sale => {
     return {
@@ -54,7 +53,7 @@ router.get('/all/export/:format', authenticate, isAnyRole(['SuperAdmin', 'Admini
       additional_comments: sale.additional_comments,
       is_priority: sale.is_priority,
       saleStatus: sale.saleStatus.status_name,
-      reason: sale.reason ? sale.reason.reason_name : '', // Dejar el campo vacío si no hay motivo
+      reason: sale.reason ? sale.reason.reason_name : 'Sin motivo',
       company: sale.company.company_name,
       created_at: sale.created_at
     };

@@ -13,10 +13,40 @@ import SaleStatus from '../models/SaleStatuses.js';
 import SaleStatusReason from '../models/SaleStatusReason.js';
 import path from 'path';
 import fs from 'fs';
+import multer from 'multer';
 import { fetchRegionById } from '../services/dataServices.js';
 import { exportSales } from '../controllers/exportController.js';
 import { Op, Sequelize } from 'sequelize';
 import { sendEmailNotification } from '../services/emailService.js';
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadPath = 'uploads/';
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    const ext = path.extname(file.originalname);
+    const newFileName = `${req.body.client_rut}_${Date.now()}${ext}`;
+    cb(null, newFileName);
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image/')|| file.mimetype === 'application/pdf' || file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || file.mimetype === 'application/msword') {
+    cb(null, true);
+  } else {
+    cb(new Error('Not an image! Please upload only images.'), false);
+  }
+};
+
+export const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // Limite de 5MB
+}).fields([{ name: 'other_images', maxCount: 5 }]);
 
 const validateInputs = async (reqBody) => {
   const { region_id, commune_id, promotion_id, sale_status_id, sale_status_reason_id } = reqBody;
@@ -95,9 +125,6 @@ export const createSale = async (req, res) => {
       return acc;
     }, {});
 
-    const files = req.files; 
-    const otherImages = files && files.other_images ? handleFileRenaming(files.other_images, reqBody.client_rut) : null;
-    const { promotion, installationAmountId } = await validateInputs(reqBody);
     const currentUser = await User.findByPk(req.user.user_id, {
       include: [
         {
@@ -110,98 +137,65 @@ export const createSale = async (req, res) => {
     if (!currentUser) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
+
     const existingRut = await Sales.findOne({ where: { client_rut: reqBody.client_rut } });
     if (existingRut) {
       return res.status(400).json({ message: 'El RUT ya existe en la base de datos' });
     }
 
-    const existingEmail = await Sales.findOne({ where: { client_email: reqBody.client_email } });
-    if (existingEmail) {
-      return res.status(400).json({ message: 'El email ya existe en la base de datos' });
+    if (reqBody.client_email && reqBody.client_email.trim() !== '') {
+      const existingEmail = await Sales.findOne({ where: { client_email: reqBody.client_email } });
+      if (existingEmail) {
+        return res.status(400).json({ message: 'El email ya existe en la base de datos' });
+      }
     }
-    const saleData = createSaleData(reqBody, otherImages ? otherImages : [], currentUser, promotion.installation_amount_id);
+
+    const otherImages = req.body.other_images ? req.body.other_images.split(',') : req.files && req.files.other_images ? req.files.other_images.map(file => file.path) : null;
+
+    const saleData = {
+      service_id: reqBody.service_id || null,
+      sales_channel_id: currentUser.salesChannel.sales_channel_id,
+      client_first_name: reqBody.client_first_name,
+      client_last_name: reqBody.client_last_name,
+      client_rut: reqBody.client_rut,
+      client_email: reqBody.client_email || null,
+      client_phone: reqBody.client_phone,
+      client_secondary_phone: reqBody.client_secondary_phone || null,
+      region_id: reqBody.region_id,
+      commune_id: reqBody.commune_id,
+      street: reqBody.street || null,
+      number: reqBody.number || null,
+      department_office_floor: reqBody.department_office_floor || null,
+      geo_reference: reqBody.geo_reference,
+      promotion_id: reqBody.promotion_id,
+      installation_amount_id: reqBody.installation_amount_id,
+      additional_comments: reqBody.additional_comments || null,
+      other_images: otherImages.length > 0 ? otherImages.join(',') : null,
+      is_priority: 0,
+      priority_modified_by_user_id: null,
+      sale_status_id: 1, // Siempre es 1
+      sale_status_reason_id: null, // Siempre es null
+      superadmin_id: currentUser.role_id === 1 ? currentUser.user_id : null,
+      admin_id: currentUser.role_id === 2 ? currentUser.user_id : null,
+      executive_id: currentUser.role_id === 3 ? currentUser.user_id : null,
+      validator_id: null,
+      dispatcher_id: null,
+      company_id: currentUser.company_id,
+      modified_by_user_id: currentUser.user_id,
+    };
+
     const sale = await Sales.create(saleData);
 
     // Send email notification if the sale is in initial status
     if (saleData.sale_status_id === 1) {
       await sendEmailNotification(sale, currentUser, reqBody);
     }
-    
 
     res.status(201).json(sale);
   } catch (error) {
     console.error('Detalles de error:', error);
     res.status(500).json({ message: 'Error creando venta', error: error.message });
   }
-};
-
-const handleFileRenaming = (files, clientRut) => {
-  // Asegurarse de que los archivos estén en un array
-  if (!Array.isArray(files)) {
-    files = [files]; // Convierte a array si es un solo archivo
-  }
-
-  if (!files || files.length === 0) {
-    return []; // Retorna vacío si no hay archivos
-  }
-
-  try {
-    // Mapea los archivos y genera nuevos nombres para cada uno
-    const newFiles = files.map((file) => {
-      const ext = path.extname(file.originalname); // Obtiene la extensión del archivo
-      const newFileName = `${clientRut}_${Date.now()}${ext}`; // Crea un nuevo nombre con timestamp
-      const filePath = path.posix.join('uploads', newFileName); // Define la ruta completa
-
-      // Renombra el archivo y lo mueve a la carpeta de 'uploads'
-      fs.renameSync(file.path, filePath);
-
-      // Normaliza la ruta del archivo para compatibilidad multiplataforma
-      const normalizedFilePath = filePath.replace(/\\/g, '/');
-
-      return normalizedFilePath;
-    });
-
-    return newFiles; // Retorna el array de rutas de los archivos renombrados
-  } catch (error) {
-    console.error(`Error al subir archivos: ${error}`);
-    return [];
-  }
-};
-
-const createSaleData = (reqBody, otherImages, currentUser, installationAmountId) => {
-  const { service_id, client_first_name, client_last_name, client_rut, client_email, client_phone, client_secondary_phone, region_id, commune_id, street, number, department_office_floor, geo_reference, promotion_id, additional_comments } = reqBody;
-
-  return {
-    service_id: service_id || null,
-    sales_channel_id: currentUser.salesChannel.sales_channel_id,
-    client_first_name,
-    client_last_name,
-    client_rut,
-    client_email,
-    client_phone,
-    client_secondary_phone: client_secondary_phone || null,
-    region_id,
-    commune_id,
-    street: street || null,
-    number: number || null,
-    department_office_floor: department_office_floor || null,
-    geo_reference,
-    promotion_id,
-    installation_amount_id: installationAmountId,
-    additional_comments: additional_comments || null,
-    other_images: otherImages.length > 0 ? otherImages.join(',') : null,
-    is_priority: 0,
-    priority_modified_by_user_id: null,
-    sale_status_id: 1, // Siempre es 1
-    sale_status_reason_id: null, // Siempre es null
-    superadmin_id: currentUser.role_id === 1 ? currentUser.user_id : null,
-    admin_id: currentUser.role_id === 2 ? currentUser.user_id : null,
-    executive_id: currentUser.role_id === 3 ? currentUser.user_id : null,
-    validator_id: null,
-    dispatcher_id: null,
-    company_id: currentUser.company_id,
-    modified_by_user_id: currentUser.user_id,
-  };
 };
 
 
@@ -868,7 +862,8 @@ export const getSaleById = async (req, res) => {
       const imagePaths = imagePath.split(',');
       const processedPaths = imagePaths.map((path) => {
         const cleanedPath = path.replace(/\\/g, '/').replace(/"/g, '');
-        return `${req.protocol}://${req.get('host')}/${cleanedPath}`;
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+        return `${protocol}://${req.get('host')}/${cleanedPath}`;
       });
       return processedPaths;
     };
@@ -1071,22 +1066,22 @@ export const updateSale = async (req, res) => {
     const userCompanyId = req.user.company_id;
 
     const {
-      service_id = null,
+      service_id,
       client_first_name,
       client_last_name,
       client_rut,
       client_email,
       client_phone,
-      client_secondary_phone = null,
+      client_secondary_phone,
       region_id,
       commune_id,
       street,
       number,
-      department_office_floor = null,
+      department_office_floor,
       geo_reference,
       promotion_id,
       installation_amount_id,
-      additional_comments = null,
+      additional_comments,
       is_priority,
       sale_status_id,
       sale_status_reason_id,
@@ -1170,7 +1165,7 @@ export const updateSale = async (req, res) => {
       sale_status_id,
       sale_status_reason_id,
       company_id,
-      other_images: allImages.join(',')
+      other_images: allImages.join(',') || null
     };
 
     let allowedFields = [];
@@ -1194,7 +1189,7 @@ export const updateSale = async (req, res) => {
         allowedSaleStatuses = [2, 3, 4, 7];
         break;
       case 5: // Despachador
-        allowedFields = ['sale_status_id', 'sale_status_reason_id'];
+        allowedFields = ['service_id', 'sale_status_id', 'sale_status_reason_id'];
         allowedSaleStatuses = [5, 6, 7];
         break;
       default:
@@ -1215,7 +1210,7 @@ export const updateSale = async (req, res) => {
     });
 
     // Validaciones adicionales
-    if (filteredUpdatedSaleData.client_email && filteredUpdatedSaleData.client_email !== sale.client_email) {
+    if (filteredUpdatedSaleData.client_email && filteredUpdatedSaleData.client_email !== sale.client_email && filteredUpdatedSaleData.client_email.trim() !== '') {
       const existingEmail = await Sales.findOne({ where: { client_email: filteredUpdatedSaleData.client_email } });
       if (existingEmail) {
         return res.status(400).json({ message: 'El email ya existe en la base de datos' });
@@ -1242,6 +1237,11 @@ export const updateSale = async (req, res) => {
 
     // Actualizar la venta
     await sale.update(filteredUpdatedSaleData);
+
+    // Verificar si el campo other_images está vacío
+    if (filteredUpdatedSaleData.other_images === '') {
+      await sale.update({ other_images: null });
+    }
 
     // Insertar registro en SaleHistory si se actualizó el estado de la venta
     if (oldSaleStatus !== filteredUpdatedSaleData.sale_status_id) {
@@ -1270,13 +1270,6 @@ export const updateSale = async (req, res) => {
         modification_date: new Date(),
         date_type: dateType,
         date: new Date(),
-      });
-
-      console.log('Debug - SaleHistory created:', {
-        sale_id: saleId,
-        previous_status_id: oldSaleStatus,
-        new_status_id: filteredUpdatedSaleData.sale_status_id,
-        date_type: dateType,
       });
     }
 

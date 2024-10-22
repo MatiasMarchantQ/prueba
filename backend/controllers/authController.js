@@ -29,9 +29,9 @@ export const login = async (req, res) => {
 
     let expiresIn;
     if (rememberMe) {
-      expiresIn = '7d'; // 7 días
+      expiresIn = '2h';
     } else {
-      expiresIn = '1h'; // 1 hora
+      expiresIn = '1h';
     }
 
     const token = jwt.sign({
@@ -71,7 +71,6 @@ export const logout = async (req, res) => {
   }
 };
 
-
 export const changePassword = async (req, res) => {
   const { password, confirmPassword } = req.body;
   const { token } = req.params;
@@ -100,6 +99,9 @@ export const changePassword = async (req, res) => {
 
     res.status(200).json({ message: 'Contraseña actualizada con éxito' });
   } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'El enlace para cambiar la contraseña ha expirado.' });
+    }
     console.error(err);
     res.status(500).json({ message: 'Error del servidor' });
   }

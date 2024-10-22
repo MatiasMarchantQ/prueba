@@ -65,7 +65,7 @@ export const getPromotions = async (req, res) => {
     }
   };
 
-  export const getInstallationAmountsByUser = async (req, res) => {
+  export const getInstallationAmountsByUser  = async (req, res) => {
     try {
       const sales = await Sale.findAll({
         where: {
@@ -81,20 +81,34 @@ export const getPromotions = async (req, res) => {
         attributes: ['sale_id', 'installation_amount_id'],
       });
   
-      if (!sales) {
+      if (!sales || sales.length === 0) {
         return res.status(404).json({ message: 'No se encontraron ventas' });
       }
   
-      const installationAmounts = [...new Map(sales.map((sale) => [sale.installation_amount_id, sale])).values()].map((sale) => ({
-        sale_id: sale.sale_id,
-        installation_amount_id: sale.installation_amount_id,
-        amount: sale.installationAmount.amount,
-      }));
+      // Usamos un objeto para almacenar montos únicos
+      const uniqueInstallationAmounts = {};
+  
+      sales.forEach((sale) => {
+        if (sale.installationAmount) {
+          const { installation_amount_id, amount } = sale.installationAmount;
+  
+          // Solo agregamos si no existe ya en el objeto
+          if (!uniqueInstallationAmounts[installation_amount_id]) {
+            uniqueInstallationAmounts[installation_amount_id] = {
+              installation_amount_id,
+              amount,
+            };
+          }
+        }
+      });
+  
+      // Convertimos el objeto a un arreglo
+      const installationAmounts = Object.values(uniqueInstallationAmounts);
   
       res.status(200).json(installationAmounts);
     } catch (error) {
       console.error(error);
-      res.status(500).json({ message: 'Error al obtener montos de instalación' });
+      res.status(500).json({ message: 'Error al obtener montos de instalación: ' + error.message });
     }
   };
 

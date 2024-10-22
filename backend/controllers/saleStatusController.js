@@ -12,7 +12,7 @@ export const getSaleStatuses = async (req, res) => {
 
     let saleStatuses;
 
-    if (userRoleId === 1 || userRoleId === 2) {
+    if (userRoleId === 1 || userRoleId === 2 || userRoleId === 6) {
       saleStatuses = await SaleStatus.findAll();
     } else if (userRoleId === 4) {
       saleStatuses = await SaleStatus.findAll({
@@ -53,7 +53,7 @@ export const getSaleStatusesFilters = async (req, res) => {
 
     let saleStatuses;
 
-    if (userRoleId === 1 || userRoleId === 2) {
+    if (userRoleId === 1 || userRoleId === 2 || userRoleId === 6) {
       saleStatuses = await SaleStatus.findAll();
     } else if (userRoleId === 4) {
       saleStatuses = await SaleStatus.findAll({

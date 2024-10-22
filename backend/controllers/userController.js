@@ -605,6 +605,7 @@ export const updateUserByAdmin = async (req, res) => {
         }
         const hashedPassword = await bcrypt.hash(req.body.password, 10);
         updates.password = hashedPassword;
+        updates.must_change_password = true;
       }
 
       if (req.body.hasOwnProperty('region_id') || req.body.hasOwnProperty('commune_id')) {
