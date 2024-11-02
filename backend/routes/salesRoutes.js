@@ -3,6 +3,7 @@ const router = express.Router();
 import { exportSales } from '../controllers/exportController.js';
 import { getAllSales , getSaleHistory , createSale, getSales, getSaleById, getSalesBySearch, updateSale, updateSalePriority, getPromotionsByCommune, getInstallationAmountsByPromotion, upload} from '../controllers/salesController.js';
 import { authenticate, isAnyRole } from '../middlewares/authMiddleware.js';
+import recaptchaMiddleware from '../middlewares/recaptchaMiddleware.js';
 
 //get
 router.get('/all', authenticate, isAnyRole(['SuperAdmin', 'Administrador', 'Validador', 'Ejecutivo','Despachador', 'Consultor']), getSales);
@@ -21,13 +22,13 @@ router.get('/all/search', authenticate, isAnyRole(['SuperAdmin', 'Administrador'
 router.get('/:sale_id', authenticate, isAnyRole(['SuperAdmin', 'Administrador', 'Validador', 'Ejecutivo','Despachador', 'Consultor']), getSaleById);
 
 //patch
-router.put('/update/:sale_id', authenticate, isAnyRole(['SuperAdmin', 'Administrador', 'Ejecutivo', 'Validador', 'Despachador']), upload, updateSale);
+router.put('/update/:sale_id', authenticate, isAnyRole(['SuperAdmin', 'Administrador', 'Ejecutivo', 'Validador', 'Despachador']), upload, recaptchaMiddleware, updateSale);
 router.put('/update-priority/:sale_id', authenticate, updateSalePriority);
 
 
 
 //post
-router.post('/create', authenticate, isAnyRole(['Ejecutivo','SuperAdmin','Administrador']), upload, createSale);
+router.post('/create', authenticate, isAnyRole(['Ejecutivo','SuperAdmin','Administrador']), upload, recaptchaMiddleware, createSale);
 
 
 router.get('/all/export/:format', authenticate, isAnyRole(['SuperAdmin', 'Administrador', 'Validador', 'Ejecutivo','Despachador', 'Consultor']), async (req, res) => {

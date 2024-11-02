@@ -17,7 +17,7 @@ export const getSaleStatuses = async (req, res) => {
     } else if (userRoleId === 4) {
       saleStatuses = await SaleStatus.findAll({
         where: {
-          sale_status_id: [2, 3, 4, 7]
+          sale_status_id: [1, 2, 3, 4, 7]
         }
       });
     } else if (userRoleId === 5) {

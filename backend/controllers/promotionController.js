@@ -47,8 +47,9 @@ export const getPromotions = async (req, res) => {
         ],
       });
   
-      if (!sales) {
-        return res.status(404).json({ message: 'No se encontraron ventas' });
+      // Si no hay ventas, retornamos array vacío con 200
+      if (!sales || sales.length === 0) {
+        return res.status(200).json([]);
       }
   
       const promotions = [...new Map(sales.map((sale) => [sale.promotion_id, sale.promotion])).values()].map((promotion) => ({
@@ -56,8 +57,6 @@ export const getPromotions = async (req, res) => {
         promotion: promotion.promotion,
       }));
       
-      const result = promotions;
-        
       res.status(200).json(promotions);
     } catch (error) {
       console.error(error);
@@ -81,8 +80,9 @@ export const getPromotions = async (req, res) => {
         attributes: ['sale_id', 'installation_amount_id'],
       });
   
+      // Si no hay ventas, retornamos array vacío con 200
       if (!sales || sales.length === 0) {
-        return res.status(404).json({ message: 'No se encontraron ventas' });
+        return res.status(200).json([]);
       }
   
       // Usamos un objeto para almacenar montos únicos
@@ -153,7 +153,7 @@ export const getPromotions = async (req, res) => {
 export const getInstallationAmounts = async (req, res) => {
     try {
       const installationAmounts = await InstallationAmount.findAll({
-        attributes: ['installation_amount_id', 'amount'],
+        attributes: ['installation_amount_id', 'amount', 'is_active'],
       });
   
       res.status(200).json(installationAmounts);
@@ -177,28 +177,6 @@ export const updateInstallationAmountForPromotion = async (req, res) => {
   
       await promotion.update({
         installation_amount_id: newInstallationAmountId,
-      });
-  
-      res.status(200).json({ message: 'Monto de instalación actualizado con éxito' });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Error al actualizar monto de instalación' });
-    }
-  };
-
-  //Modificar monto de instalación
-  export const updateInstallationAmount = async (req, res) => {
-    try {
-      const installationAmountId = req.params.installationAmountId;
-      const newAmount = req.body.amount;
-  
-      const installationAmount = await InstallationAmount.findByPk(installationAmountId);
-      if (!installationAmount) {
-        return res.status(404).json({ message: 'Monto de instalación no encontrado' });
-      }
-  
-      await installationAmount.update({
-        amount: newAmount,
       });
   
       res.status(200).json({ message: 'Monto de instalación actualizado con éxito' });
@@ -588,3 +566,103 @@ export const updateInstallationAmountForPromotion = async (req, res) => {
   }
 }
   };
+
+
+
+  // 1. Agregar un nuevo monto de instalación
+export const addInstallationAmount = async (req, res) => {
+  try {
+    const { amount } = req.body;
+
+    // Validar que el monto sea proporcionado
+    if (!amount) {
+      return res.status(400).json({ 
+        message: 'El monto de instalación es requerido' 
+      });
+    }
+
+    // Crear nuevo monto de instalación
+    const newInstallationAmount = await InstallationAmount.create({
+      amount,
+      is_active: 1 // Por defecto activo
+    });
+
+    res.status(201).json({
+      message: 'Monto de instalación creado exitosamente',
+      installationAmount: newInstallationAmount
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ 
+      message: 'Error al crear monto de instalación',
+      error: error.message 
+    });
+  }
+};
+
+
+    //Modificar monto de instalación
+    export const updateInstallationAmount = async (req, res) => {
+      try {
+        const installationAmountId = req.params.installationAmountId;
+        const newAmount = req.body.amount;
+    
+        const installationAmount = await InstallationAmount.findByPk(installationAmountId);
+        if (!installationAmount) {
+          return res.status(404).json({ message: 'Monto de instalación no encontrado' });
+        }
+    
+        await installationAmount.update({
+          amount: newAmount,
+        });
+    
+        res.status(200).json({ message: 'Monto de instalación actualizado con éxito' });
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error al actualizar monto de instalación' });
+      }
+    };
+
+    // 3. Habilitar/deshabilitar montos de instalación
+export const toggleInstallationAmount = async (req, res) => {
+  try {
+    const { installationAmountId } = req.params;
+    const { is_active } = req.body;
+
+    // Validar que is_active sea booleano
+    if (typeof is_active !== 'boolean') {
+      return res.status(400).json({
+        message: 'is_active debe ser un valor booleano'
+      });
+    }
+
+    const installationAmount = await InstallationAmount.findByPk(installationAmountId);
+
+    if (!installationAmount) {
+      return res.status(404).json({
+        message: 'Monto de instalación no encontrado'
+      });
+    }
+
+    // Actualizar estado
+    await installationAmount.update({
+      is_active: is_active ? 1 : 0
+    });
+
+    res.status(200).json({
+      message: `Monto de instalación ${is_active ? 'habilitado' : 'deshabilitado'} exitosamente`,
+      installationAmount: {
+        ...installationAmount.toJSON(),
+        is_active: is_active ? 1 : 0
+      }
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: 'Error al modificar estado del monto de instalación',
+      error: error.message
+    });
+  }
+};

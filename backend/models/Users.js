@@ -95,6 +95,14 @@ const User = sequelize.define('User', {
     type: DataTypes.TINYINT,
     allowNull: false,
   },
+  reset_code: {
+    type: DataTypes.STRING(6),
+    allowNull: true,
+  },
+  reset_code_expires: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
   created_at: {
     type: DataTypes.DATE,
     allowNull: true,
@@ -113,7 +121,15 @@ const User = sequelize.define('User', {
       model: 'User',
       key: 'user_id',
     },
-  }
+  },
+  contract_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'contract',
+      key: 'contract_id'
+    }
+  },
 }, {
   tableName: 'users',
   timestamps: false,

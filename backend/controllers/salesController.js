@@ -11,13 +11,35 @@ import PromotionCommune from '../models/PromotionsCommunes.js';
 import Company from '../models/Companies.js';
 import SaleStatus from '../models/SaleStatuses.js';
 import SaleStatusReason from '../models/SaleStatusReason.js';
+import Contract from '../models/Contract.js';
 import path from 'path';
 import fs from 'fs';
 import multer from 'multer';
 import { fetchRegionById } from '../services/dataServices.js';
 import { exportSales } from '../controllers/exportController.js';
 import { Op, Sequelize } from 'sequelize';
-import { sendEmailNotification } from '../services/emailService.js';
+import { sendEmailNotification, sendActiveSaleEmailNotification } from '../services/emailService.js';
+
+const getLocalDateTime = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
+
+const getLocalDate = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
+};
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -45,7 +67,7 @@ const fileFilter = (req, file, cb) => {
 export const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // Limite de 5MB
+  limits: { fileSize: 2 * 1024 * 1024 }, // Limite de 2MB
 }).fields([{ name: 'other_images', maxCount: 5 }]);
 
 const validateInputs = async (reqBody) => {
@@ -182,6 +204,7 @@ export const createSale = async (req, res) => {
       dispatcher_id: null,
       company_id: currentUser.company_id,
       modified_by_user_id: currentUser.user_id,
+      created_at: getLocalDateTime(),
     };
 
     const sale = await Sales.create(saleData);
@@ -254,7 +277,7 @@ export const getSaleHistory = async (req, res) => {
           attributes: ['reason_name'],
         },
       ],
-      order: [['modification_date', 'ASC']],
+      order: [['history_id', 'ASC']],
     });
 
     // Procesar el historial para obtener la información requerida
@@ -275,6 +298,7 @@ export const getSaleHistory = async (req, res) => {
         reason: history.reason ? history.reason.reason_name : null,
         isPriority: history.is_priority === 1,
         priorityModifiedBy: history.priorityModifiedByUser ? `${history.priorityModifiedByUser.first_name} ${history.priorityModifiedByUser.last_name} (${history.priorityModifiedByUser.role.role_name})` : null,
+        additional_comments: history.additional_comments
       };
     });
 
@@ -485,11 +509,7 @@ const buildWhereConditions = (roleId, companyId, userId) => {
   if (roleId === 2) {
     where.company_id = companyId;
   } else if (roleId === 3) {
-    where.executive_id = userId;
-  }
-
-  if (roleId === 3) {
-    where.sale_status_id = [1, 4];
+    where.executive_id = userId;  
   } else if (roleId === 4) {
     where.sale_status_id = [1, 3];
   } else if (roleId === 5) {
@@ -763,6 +783,11 @@ export const getSaleById = async (req, res) => {
               model: Company,
               as: 'company',
               attributes: ['company_name'],
+            },
+            {
+              model: Contract,
+              as: 'contract',
+              attributes: ['contract_name'],
             },
           ],
         },
@@ -1189,7 +1214,7 @@ export const updateSale = async (req, res) => {
         allowedSaleStatuses = [2, 3, 4, 7];
         break;
       case 5: // Despachador
-        allowedFields = ['service_id', 'sale_status_id', 'sale_status_reason_id'];
+        allowedFields = ['service_id', 'sale_status_id', 'sale_status_reason_id', 'additional_comments'];
         allowedSaleStatuses = [5, 6, 7];
         break;
       default:
@@ -1210,17 +1235,29 @@ export const updateSale = async (req, res) => {
     });
 
     // Validaciones adicionales
+    if (filteredUpdatedSaleData.service_id && filteredUpdatedSaleData.service_id !== sale.service_id) {
+      const existingService = await Sales.findOne({ 
+        where: { 
+          service_id: filteredUpdatedSaleData.service_id,
+          sale_id: { [Op.ne]: saleId }
+        } 
+      });
+      if (existingService) {
+        return res.status(400).json({ message: 'El ID de servicio ya existe' });
+      }
+    }
+
     if (filteredUpdatedSaleData.client_email && filteredUpdatedSaleData.client_email !== sale.client_email && filteredUpdatedSaleData.client_email.trim() !== '') {
       const existingEmail = await Sales.findOne({ where: { client_email: filteredUpdatedSaleData.client_email } });
       if (existingEmail) {
-        return res.status(400).json({ message: 'El email ya existe en la base de datos' });
+        return res.status(400).json({ message: 'El email ya existe' });
       }
     }
 
     if (filteredUpdatedSaleData.client_rut && filteredUpdatedSaleData.client_rut !== sale.client_rut) {
       const existingRut = await Sales.findOne({ where: { client_rut: filteredUpdatedSaleData.client_rut } });
       if (existingRut) {
-        return res.status(400).json({ message: 'El RUT ya existe en la base de datos' });
+        return res.status(400).json({ message: 'El RUT ya existe' });
       }
     }
 
@@ -1241,6 +1278,23 @@ export const updateSale = async (req, res) => {
     // Verificar si el campo other_images está vacío
     if (filteredUpdatedSaleData.other_images === '') {
       await sale.update({ other_images: null });
+    }
+
+    // Obtener el último registro del historial
+    const lastHistoryRecord = await SaleHistory.findOne({
+      where: { sale_id: saleId },
+      order: [['modification_date', 'DESC']],
+    });
+
+    // Determinar si se debe registrar el comentario
+    let commentToSave = null;
+    if (additional_comments) {
+      // Solo guardar el comentario si:
+      // 1. No hay registro previo, o
+      // 2. El comentario actual es diferente al último comentario registrado
+      if (!lastHistoryRecord || lastHistoryRecord.additional_comments !== additional_comments) {
+        commentToSave = additional_comments;
+      }
     }
 
     // Insertar registro en SaleHistory si se actualizó el estado de la venta
@@ -1267,10 +1321,37 @@ export const updateSale = async (req, res) => {
         new_status_id: filteredUpdatedSaleData.sale_status_id,
         sale_status_reason_id: filteredUpdatedSaleData.sale_status_reason_id,
         modified_by_user_id: userId,
-        modification_date: new Date(),
+        modification_date: getLocalDateTime(),
         date_type: dateType,
-        date: new Date(),
+        date: getLocalDate(),
+        additional_comments: commentToSave
       });
+    }
+    // Enviar correo si el estado de la venta se actualiza a 6
+    if (Number(filteredUpdatedSaleData.sale_status_id) === 6) {
+      // Obtener el historial de la venta para encontrar quién la ingresó
+      const saleHistory = await SaleHistory.findOne({
+        where: {
+          sale_id: sale.sale_id,
+          new_status_id: 1, // Solo buscamos la entrada donde se ingresó la venta
+          previous_status_id: null // Esto ayuda a identificar la entrada inicial
+        },
+        order: [['modification_date', 'ASC']], // Asegúrate de obtener el primer registro
+      });
+
+      if (saleHistory) {
+        const userId = saleHistory.modified_by_user_id;
+      
+        // Obtener el usuario que ingresó la venta
+        const saleCreator = await User.findByPk(userId);
+        if (saleCreator && saleCreator.email) {
+          try {
+            await sendActiveSaleEmailNotification(sale, saleCreator, req.body);
+          } catch (emailError) {
+            console.error(`Error al enviar el correo a ${saleCreator.first_name} ${saleCreator.last_name}:`, emailError);
+          }
+        }
+      }
     }
 
     // Actualizar campos específicos basados en el rol
@@ -1336,10 +1417,10 @@ if (is_priority === 1) {
     new_status_id: newStatusId,
     sale_status_reason_id: null,
     priority_modified_by_user_id: userId,
-    modification_date: new Date(),
+    modification_date: getLocalDateTime(),
     is_priority: 1,
     date_type: 'Prioridad',
-    date: new Date(),
+    date: getLocalDate()
   });
 }
 

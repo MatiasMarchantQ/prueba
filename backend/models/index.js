@@ -13,6 +13,7 @@ import InstallationAmount from './InstallationAmounts.js';
 import Promotion from './Promotions.js';
 import PromotionCommune from './PromotionsCommunes.js';
 import SaleStatusReason from './SaleStatusReason.js';
+import Contract from './Contract.js';
 
 const sequelize = new Sequelize(
   config.db.name,
@@ -103,5 +104,14 @@ PromotionCommune.belongsTo(Promotion, {
 Commune.hasMany(PromotionCommune, { foreignKey: 'commune_id', as: 'promotionCommunes' });
 PromotionCommune.belongsTo(Commune, { foreignKey: 'commune_id', as: 'commune' });
 
-export { User, Role, SalesChannel, Company, Region, Commune, Sales, SaleHistory, SaleStatus, InstallationAmount, Promotion, PromotionCommune, SaleStatusReason };
+User.belongsTo(Contract, {
+  foreignKey: 'contract_id',
+  as: 'contract'
+});
+
+Contract.hasMany(User, {
+  foreignKey: 'contract_id'
+});
+
+export { User, Role, SalesChannel, Company, Region, Commune, Sales, SaleHistory, SaleStatus, InstallationAmount, Promotion, PromotionCommune, SaleStatusReason, Contract };
 export default sequelize;

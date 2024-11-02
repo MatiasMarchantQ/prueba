@@ -3,6 +3,13 @@ import sequelize from '../config/db.js';
 import SaleHistory from './SaleHistories.js';
 import { now } from 'sequelize/lib/utils';
 
+
+// Definir la función getLocalDateTime
+const getLocalDateTime = () => {
+  const now = new Date();
+  return now.toLocaleString('sv-SE'); // Formato 'YYYY-MM-DD HH:mm:ss'
+};
+
 const Sales = sequelize.define('Sales', {
   sale_id: {
     type: DataTypes.INTEGER,
@@ -175,9 +182,9 @@ const Sales = sequelize.define('Sales', {
     },
   },
   created_at: {
-    type: DataTypes.DATE,
+    type: DataTypes.TEXT,
     allowNull: true,
-    defaultValue: DataTypes.NOW,
+    defaultValue: () => getLocalDateTime()
   },
   updated_at: {
     type: DataTypes.DATE,
@@ -208,8 +215,10 @@ const Sales = sequelize.define('Sales', {
         new_status_id: sale.sale_status_id,
         sale_status_reason_id: sale.sale_status_reason_id,
         modified_by_user_id: sale.modified_by_user_id,
-        modification_date: Date.now(),
+        modification_date: sale.created_at,
         date_type: sale.sale_status_id === 1 ? 'Ingresado' : null,
+        date: sale.created_at.split(' ')[0], 
+        additional_comments: sale.additional_comments || null
       });
     }
   },

@@ -2,8 +2,7 @@
 import express from 'express';
 import { getCompanies, getAllCompanies, swapPriorityLevels, createCompany, updateCompanyName, toggleCompanyStatus } from '../controllers/companyController.js';
 import { authenticate} from '../middlewares/authMiddleware.js';
-
-
+import recaptchaMiddleware from '../middlewares/recaptchaMiddleware.js';
 const router = express.Router();
 
 //Obtener lista empresas
@@ -13,10 +12,10 @@ router.get('/', authenticate ,getCompanies);
 router.get('/all', authenticate, getAllCompanies);
 
 //Crear una nueva empresa
-router.post('/create', authenticate , createCompany);
+router.post('/create', authenticate, recaptchaMiddleware, createCompany);
 
 //Actualizar nombre de una empresa
-router.put('/:companyId', authenticate, updateCompanyName);
+router.put('/:companyId', authenticate, recaptchaMiddleware, updateCompanyName);
 
 //Habilitar y deshabilitar empresas
 router.patch('/:companyId/toggle-status', authenticate, toggleCompanyStatus);

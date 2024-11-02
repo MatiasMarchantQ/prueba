@@ -6,6 +6,7 @@ import Commune from '../models/Communes.js';
 import Role from '../models/Roles.js';
 import SalesChannel from '../models/SalesChannels.js';
 import Company from '../models/Companies.js';
+import Contract from '../models/Contract.js';
 import { Op } from 'sequelize';
 import { fetchUsersWithRoles } from '../services/dataServices.js';
 
@@ -123,6 +124,11 @@ export const getAllUsers = async (req, res) => {
           model: Role,
           as: 'role',
           attributes: ['role_name']
+        },
+        {
+          model: Contract,
+          as: 'contract',
+          attributes: ['contract_name']
         }
       ],
       order: [[sortField, order === 'asc' ? 'ASC' : 'DESC']]
@@ -166,7 +172,8 @@ export const getUserById = async (req, res) => {
         'must_change_password',
         'created_at',
         'updated_at',
-        'modified_by_user_id'
+        'modified_by_user_id',
+        'contract_id'
       ],
       include: [
         {
@@ -193,6 +200,11 @@ export const getUserById = async (req, res) => {
           model: Role,
           as: 'role',
           attributes: ['role_name']
+        },
+        {
+          model: Contract,
+          as: 'contract',
+          attributes: ['contract_name']
         }
       ]
     });
@@ -206,17 +218,31 @@ export const getUserById = async (req, res) => {
     res.status(500).json({ message: 'Error del servidor' });
   }
 };
-
 export const getMe = async (req, res) => {
   try {
-    const user = req.user;
+    // Buscar el usuario con todas sus relaciones necesarias
+    const user = await User.findOne({
+      where: { user_id: req.user.user_id },
+      include: [
+        {
+          model: Contract,
+          as: 'contract', // Importante: usar el mismo alias que definiste en las relaciones
+          attributes: ['contract_id', 'contract_name']
+        },
+        // Otras relaciones que necesites...
+      ]
+    });
+
     if (!user) {
       return res.status(404).send({ error: 'No se encontró el usuario autenticado' });
     }
-    const userData = validateUser(user);
+
+    // Convertir a JSON plano y validar
+    const userData = validateUser(user.toJSON());
     if (!userData) {
       return res.status(400).send({ error: 'Datos del usuario inválidos' });
     }
+    
     res.send(userData);
   } catch (error) {
     console.error(error);
@@ -225,6 +251,15 @@ export const getMe = async (req, res) => {
 };
 
 function validateUser(user) {
+  if (user.role_id === 3) {
+    return {
+      ...user,
+      contract: user.contract ? {
+        contract_id: user.contract.contract_id,
+        contract_name: user.contract.contract_name
+      } : null
+    };
+  }
   return user;
 }
 
@@ -245,6 +280,7 @@ export const register = async (req, res) => {
       number,
       department_office_floor,
       role_id,
+      contract_id,
     } = req.body;
 
     // Verificar rol
@@ -307,6 +343,7 @@ export const register = async (req, res) => {
       role_id,
       status: 1,
       must_change_password: true,
+      contract_id: contract_id || null,
     });
 
     res.status(201).json({ message: 'Usuario registrado con éxito', user: newUser });
@@ -337,10 +374,11 @@ export const registerUserByAdmin = async (req, res) => {
       number,
       department_office_floor,
       role_id,
+      contract_id,
     } = req.body;
 
-    if (![3, 4, 6].includes(role_id)) {
-      return res.status(400).json({ message: 'El rol especificado no es válido. Debe ser 3, 4 o 6' });
+    if (![2, 3].includes(role_id)) {
+      return res.status(400).json({ message: 'El rol especificado no es válido.' });
     }
 
     const role = await Role.findByPk(role_id);
@@ -400,6 +438,7 @@ export const registerUserByAdmin = async (req, res) => {
       role_id,
       status: 1,
       must_change_password: true,
+      contract_id,
     };
 
     const newUser = await User.create(newUserData);
@@ -513,6 +552,7 @@ export const updateUserByAdmin = async (req, res) => {
     const currentUserId = req.user.user_id;
     const currentUserRoleId = req.user.role_id;
     const targetUserId = req.params.id;
+    const { role_id, contract_id } = req.body;
 
     const userToUpdate = await User.findByPk(targetUserId);
     if (!userToUpdate) {
@@ -534,23 +574,39 @@ export const updateUserByAdmin = async (req, res) => {
 
     // Función para manejar region_id y commune_id
     const handleRegionAndCommune = async (updates, req) => {
+      // Si se proporciona region_id
       if (req.body.hasOwnProperty('region_id')) {
         updates.region_id = req.body.region_id;
-        if (updates.region_id === null) {
+        
+        // Si la región es null o vacía, también limpiamos la comuna
+        if (!updates.region_id || updates.region_id === '') {
+          updates.region_id = null;
           updates.commune_id = null;
+          return; // Terminamos aquí si no hay región
         }
       }
     
+      // Si se proporciona commune_id
       if (req.body.hasOwnProperty('commune_id')) {
-        if (updates.region_id !== null) {
-          if (req.body.commune_id === null || req.body.commune_id === '') {
-            updates.commune_id = null;
+        // Si la comuna es null o vacía, la establecemos como null y terminamos
+        if (!req.body.commune_id || req.body.commune_id === '') {
+          updates.commune_id = null;
+          return;
+        }
+    
+        // Solo validamos la asociación si tenemos tanto región como comuna
+        if (updates.region_id) {
+          const commune = await Commune.findOne({
+            where: {
+              commune_id: req.body.commune_id,
+              region_id: updates.region_id
+            }
+          });
+    
+          if (!commune) {
+            updates.commune_id = null; // En lugar de lanzar error, simplemente no asignamos la comuna
           } else {
             updates.commune_id = req.body.commune_id;
-            const commune = await Commune.findByPk(updates.commune_id);
-            if (commune && commune.region_id !== updates.region_id) {
-              throw new Error('La comuna no está asociada a la región seleccionada');
-            }
           }
         } else {
           updates.commune_id = null;
@@ -570,6 +626,7 @@ export const updateUserByAdmin = async (req, res) => {
     if (req.body.department_office_floor) updates.department_office_floor = req.body.department_office_floor;
     if (req.body.rut) updates.rut = req.body.rut;
     if (req.body.role_id) updates.role_id = req.body.role_id;
+    if (req.body.contract_id) updates.contract_id = req.body.contract_id;
 
     // Convertir status a número
     if (typeof req.body.status !== 'undefined') {
@@ -614,6 +671,17 @@ export const updateUserByAdmin = async (req, res) => {
 
       if (currentUserRoleId === 2 && userToUpdate.company_id !== req.user.company_id) {
         return res.status(403).json({ message: 'No tienes permisos para actualizar este usuario' });
+      }
+
+      if (role_id === 3) {
+        if (!contract_id) {
+          return res.status(400).json({ 
+            message: 'El tipo de contrato es requerido para ejecutivos' 
+          });
+        }
+        updates.contract_id = contract_id; // Agregar esta línea
+      } else {
+        updates.contract_id = null;
       }
     }
 

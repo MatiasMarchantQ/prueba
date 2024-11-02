@@ -11,6 +11,7 @@ import saleschannelRoutes from './routes/saleschannelRoutes.js';
 import saleStatusRoutes from './routes/saleStatusRoutes.js';
 import promotionRoutes from './routes/promotionRoutes.js';
 import dashboardRoutes from './controllers/dashboardController.js';
+import contractRoutes from './routes/contractRoutes.js';
 import sequelize from './config/db.js';
 
 const app = express();
@@ -30,6 +31,7 @@ app.use('/api/channels', saleschannelRoutes);
 app.use('/api/sale-statuses', saleStatusRoutes);
 app.use('/api/promotions', promotionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/contracts', contractRoutes);
 
 app.use('/uploads', express.static('uploads'));
 

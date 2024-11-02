@@ -36,7 +36,7 @@ const SaleHistory = sequelize.define('SaleHistory', {
     },
   },
   modification_date: {
-    type: DataTypes.DATE,
+    type: DataTypes.STRING,
     defaultValue: sequelize.literal('CURRENT_TIMESTAMP')
   },
   is_priority: {
@@ -48,7 +48,7 @@ const SaleHistory = sequelize.define('SaleHistory', {
     type: DataTypes.ENUM('Prioridad', 'Ingresado', 'Validado', 'Activo', 'Anulado', 'No Prioridad'),
   },
   date: {
-    type: DataTypes.DATE,
+    type: DataTypes.DATEONLY,
   },
   priority_modified_by_user_id: {
     type: DataTypes.INTEGER(11),
@@ -58,6 +58,10 @@ const SaleHistory = sequelize.define('SaleHistory', {
       key: 'user_id',
     },
   },
+  additional_comments: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  }
 }, {
   tableName: 'salehistories',
   timestamps: false,
