@@ -29,7 +29,7 @@ const InstallationAmount = sequelize.define('InstallationAmount', {
   },
   is_active: {
     type: DataTypes.TINYINT,
-    defaultValue: 1
+    allowNull: false,
   },
 }, {
   tableName: 'installationamounts',

@@ -58,10 +58,10 @@ const SaleHistory = sequelize.define('SaleHistory', {
       key: 'user_id',
     },
   },
-  additional_comments: {
+	additional_comments: {
     type: DataTypes.TEXT,
     allowNull: true
-  }
+ 	}
 }, {
   tableName: 'salehistories',
   timestamps: false,

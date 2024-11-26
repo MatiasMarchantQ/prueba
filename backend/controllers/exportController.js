@@ -29,7 +29,8 @@ export const exportSales = async (sales, format, filters ,res) => {
         'Estado de venta',
         'Motivo de estado de venta',
         'Empresa',
-        'Fecha de creación'
+        'Fecha de creación',
+        'Ejecutivo',
       ]);
 
       // Establecer el ancho de las columnas
@@ -55,7 +56,8 @@ export const exportSales = async (sales, format, filters ,res) => {
         { header: 'Estado de venta', key: 'saleStatus', width: 15 },
         { header: 'Motivo de estado de venta', key: 'reason', width: 20 },
         { header: 'Empresa', key: 'company', width: 20 },
-        { header: 'Fecha de creación', key: 'created_at', width: 15 }
+        { header: 'Fecha de creación', key: 'created_at', width: 15 },
+        { header: 'Ejecutivo', key: 'executive', width: 30 }
       ];
 
       // Agregar datos a la hoja de cálculo
@@ -82,7 +84,8 @@ export const exportSales = async (sales, format, filters ,res) => {
           sale.saleStatus,
           sale.reason,
           sale.company,
-          new Date(sale.created_at).toLocaleString('es-ES', { timeZone: 'America/Santiago' })
+          new Date(sale.created_at).toLocaleString('es-ES', { timeZone: 'America/Santiago' }),
+          sale.executive || 'No asignado'
         ]);
       });
 
@@ -118,6 +121,7 @@ export const exportSales = async (sales, format, filters ,res) => {
         new docx.Paragraph(`Motivo de estado de venta: ${sale.reason}`),
         new docx.Paragraph(`Empresa: ${sale.company}`),
         new docx.Paragraph(`Fecha de creación: ${sale.created_at}`),
+        new docx.Paragraph(`Fecha de creación: ${sale.executive}`)
       ],
     });
   });
@@ -157,7 +161,8 @@ export const exportSales = async (sales, format, filters ,res) => {
           sale.saleStatus,
           sale.reason,
           sale.company,
-          sale.created_at
+          sale.created_at,
+          sale.executive
         ]);
       });
       const csvBuffer = await csvToBuffer(csv);

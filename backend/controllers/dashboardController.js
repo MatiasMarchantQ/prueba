@@ -15,28 +15,41 @@ import path from 'path';
 import fs from 'fs';
 import { fetchRegionById } from '../services/dataServices.js';
 import { Op, Sequelize } from 'sequelize';
+import jwt from 'jsonwebtoken';
 
 const getDashboardStats = async (req, res) => {
   try {
-    const hoy = new Date();
-    const docesMesesAtras = new Date(hoy.getFullYear(), hoy.getMonth() - 11, 1);
-    const nombresMeses = [
-      "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-      "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-    ];
+    const authHeader = req.header('Authorization');    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'No autenticado' });
+    }
 
-       // Mapeo de IDs a nombres de estado
-  const statusIdToName = {
-    1: "Ingresada",
-    2: "Nueva",
-    3: "En revisión",
-    4: "Corrección requerida",
-    5: "Pendiente",
-    6: "Activo",
-    7: "Anulado"
-  };
+    const token = authHeader.split(' ')[1];    
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
+    // Modificar la consulta para usar los nombres correctos de las columnas
+    const user = await User.findOne({
+      where: { user_id: decoded.user_id },
+      attributes: ['user_id', 'role_id', 'company_id'], // Solo los campos que existen
+      include: [
+        { 
+          model: Role,
+          as: 'role',
+          attributes: ['role_id', 'role_name']
+        },
+        {
+          model: Company,
+          as: 'company',
+          attributes: ['company_id', 'company_name']
+        }
+      ]
+    });
 
-    const sales = await Sales.findAll({
+    if (!user) {
+      return res.status(401).json({ message: 'Usuario no encontrado' });
+    }
+
+    // Filtrar las ventas según el rol del usuario
+    let salesQuery = {
       include: [
         {
           model: Region,
@@ -89,7 +102,35 @@ const getDashboardStats = async (req, res) => {
           attributes: ['sale_id', 'new_status_id', 'modification_date']
         },
       ]
-    });
+    };
+
+    // Si el usuario tiene role_id === 2, filtrar por su company_id
+    if (user.role_id === 2) {
+      salesQuery.where = {
+        company_id: user.company_id
+      };
+    }
+
+    const sales = await Sales.findAll(salesQuery);
+
+
+    const hoy = new Date();
+    const docesMesesAtras = new Date(hoy.getFullYear(), hoy.getMonth() - 11, 1);
+    const nombresMeses = [
+      "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+      "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    ];
+
+       // Mapeo de IDs a nombres de estado
+  const statusIdToName = {
+    1: "Ingresada",
+    2: "Nueva",
+    3: "En revisión",
+    4: "Corrección requerida",
+    5: "Pendiente",
+    6: "Activo",
+    7: "Anulado"
+  };
 
     const statistics = {};
 
@@ -130,7 +171,7 @@ const getDashboardStats = async (req, res) => {
 
     // Formar el mensaje con el contador y el año
     const nombreMes = new Intl.DateTimeFormat('es', { month: 'long' }).format(fechaActual);
-    statistics.mensajeVentasMes = `+${statistics.ventasDelMesActual} en ${nombreMes} ${añoActual}`;
+    statistics.mensajeVentasMes = `+${statistics.ventasDelMesActual} ingresadas en ${nombreMes} ${añoActual}`;
     
     
     //2 Ventas por región (solo activas y del año actual)

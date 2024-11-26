@@ -50,9 +50,9 @@ export const login = async (req, res) => {
 
     let expiresIn;
     if (rememberMe) {
-      expiresIn = '2h';
+      expiresIn = '8h';
     } else {
-      expiresIn = '1h';
+      expiresIn = '8h';
     }
 
     const token = jwt.sign({
@@ -61,14 +61,6 @@ export const login = async (req, res) => {
       must_change_password: user.must_change_password,
       status: user.status,
     }, process.env.SECRET_KEY, { expiresIn });
-
-    // Log para debugging
-    console.log('Login exitoso para:', {
-      email: user.email,
-      userId: user.user_id,
-      roleId: user.role_id,
-      mustChangePassword: user.must_change_password
-    });
 
     res.status(200).json({
       message: 'Login exitoso',

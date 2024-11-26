@@ -27,6 +27,7 @@ export const getAllUsers = async (req, res) => {
     sales_channel_id,
     role_id,
     status,
+    contract_id,
     search,
     sort,
     order = 'asc'
@@ -44,9 +45,23 @@ export const getAllUsers = async (req, res) => {
     if (sales_channel_id) whereClause.sales_channel_id = sales_channel_id;
     if (role_id) whereClause.role_id = role_id;
     if (status) whereClause.status = status;
+    if (contract_id) {
+      if (contract_id === '1') {
+        // Si contract_id es 1, incluir también los null y los vacíos
+        whereClause.contract_id = {
+          [Op.or]: [null, '', contract_id] // Incluye null, vacío y contract_id igual a 1
+        };
+      } else {
+        // Para otros contract_id, filtrar normalmente
+        whereClause.contract_id = contract_id;
+      }
+    }
 
     if (req.user.role_id === 2) {
       whereClause.company_id = req.user.company_id;
+      whereClause.role_id = {
+        [Op.in]: [2, 3]
+      };
     }
 
     if (decodedSearch) {

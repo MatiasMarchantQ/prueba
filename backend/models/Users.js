@@ -95,7 +95,7 @@ const User = sequelize.define('User', {
     type: DataTypes.TINYINT,
     allowNull: false,
   },
-  reset_code: {
+	reset_code: {
     type: DataTypes.STRING(6),
     allowNull: true,
   },

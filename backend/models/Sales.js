@@ -3,7 +3,6 @@ import sequelize from '../config/db.js';
 import SaleHistory from './SaleHistories.js';
 import { now } from 'sequelize/lib/utils';
 
-
 // Definir la función getLocalDateTime
 const getLocalDateTime = () => {
   const now = new Date();
@@ -38,12 +37,10 @@ const Sales = sequelize.define('Sales', {
   },
   client_rut: {
     type: DataTypes.STRING(20),
-    unique: true,
     allowNull: false,
   },
   client_email: {
     type: DataTypes.STRING(255),
-    unique: true,
     allowNull: true,
   },
   client_phone: {
@@ -217,7 +214,7 @@ const Sales = sequelize.define('Sales', {
         modified_by_user_id: sale.modified_by_user_id,
         modification_date: sale.created_at,
         date_type: sale.sale_status_id === 1 ? 'Ingresado' : null,
-        date: sale.created_at.split(' ')[0], 
+		date: sale.created_at.split(' ')[0], 
         additional_comments: sale.additional_comments || null
       });
     }

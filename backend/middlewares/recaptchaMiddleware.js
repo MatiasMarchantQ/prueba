@@ -49,7 +49,7 @@ const recaptchaMiddleware = async (req, res, next) => {
         });
 
         // Evaluación del score
-        if (!data.success || data.score < 0.5) {
+        if (!data.success || data.score < 0.2) {
             // Registra el intento fallido
             if (!failedAttempts[clientIP]) {
                 failedAttempts[clientIP] = {
@@ -85,7 +85,7 @@ const recaptchaMiddleware = async (req, res, next) => {
                 attemptsLeft
             };
 
-            if (data.score < 0.3) {
+            if (data.score < 0.2) {
                 console.log('⚠️ Score muy bajo detectado:', data.score);
                 response.message = `Verificación fallida. ${attemptsLeft} intentos restantes antes del bloqueo`;
                 return res.status(403).json(response);
