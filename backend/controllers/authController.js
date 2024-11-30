@@ -28,7 +28,6 @@ export const login = async (req, res) => {
       });
     }
 
-    // Verificar el estado del usuario
     if (user.status === 0) {
       return res.status(403).json({
         message: 'Su cuenta se encuentra suspendida. Comuníquese con un administrador para obtener más información.',
