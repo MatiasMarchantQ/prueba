@@ -1,0 +1,236 @@
+/* Global Styles for DetalleUsuario */
+
+.detalle-usuario-page {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  height: auto;
+  max-width: 100%;
+  font-family: Montserrat;
+}
+
+.detalle-usuario-header {
+  text-align: center;
+  font-weight: bold;
+  font-size: 2rem;
+  color: #99235C;
+}
+
+.detalle-usuario-container {
+  background-color: #fff;
+  padding: 20px;
+  margin: 0 auto;
+  color: #333;
+  max-width: 100%;
+}
+
+.detalle-usuario-button {
+  background-color: #99235C;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 10px;
+  width: 15%; /* Ocupa el 100% del ancho en pantallas pequeñas */
+}
+
+.detalle-usuario-button:hover {
+  background-color: #b93775;
+}
+
+#update-user {
+  background-color: #99235C;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 10px;
+  width: 100%;
+}
+
+#update-user:hover {
+  background-color: #b93775;
+}
+
+.detalle-usuario-info {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* Dos columnas en pantallas más grandes */
+  gap: 4rem;
+}
+
+.detalle-usuario-label {
+  margin-bottom: 5px;
+  color: #99235C;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.detalle-usuario-value {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 16px;
+  background-color: #fff;
+  margin-bottom: 10px;
+  width: 100%;
+}
+
+.editable {
+  border: 1px solid #ccc;
+  padding: 5px;
+  border-radius: 5px;
+}
+
+/* Checkbox specific styles */
+input[type="checkbox"] {
+  margin-left: 10px;
+}
+
+.detalle-usuario-page .password-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.detalle-usuario-page .password-input-container input {
+  width: 100%;
+  padding-right: 70px;
+}
+
+.detalle-usuario-page .detalle-usuario-info .password-section{
+  margin-top: 4%;
+}
+
+.detalle-usuario-page .password-section .password-buttons {
+  position: absolute;
+  left: 94%;
+  top: 45%;
+  transform: translateY(-50%);
+  display: flex;
+}
+
+.detalle-usuario-page .password-section .password-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  color: #99235C;
+}
+
+.detalle-usuario-page .password-section .password-button:hover{
+  background: none;
+}
+
+.detalle-usuario-page .button-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.button-container .detalle-usuario-submit,
+.button-container .volver-editar-button,
+.button-container .cancelar-button {
+  flex: 1;
+  background-color: #99235C;
+  color: #fff;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  text-align: center;
+  min-width: 120px;
+}
+
+.button-container .detalle-usuario-submit:hover,
+.button-container .volver-editar-button:hover,
+.button-container .cancelar-button:hover {
+  background-color: #b93775;
+}
+
+.button-container .detalle-usuario-submit:disabled {
+  background-color: #575757;
+  cursor: not-allowed;
+}
+
+
+/* Responsive styles for tablets */
+@media (max-width: 1024px) {
+  .detalle-usuario-info {
+    grid-template-columns: 1fr; /* Una columna para tablets */
+    gap: 2rem;
+  }
+
+  .detalle-usuario-header {
+    font-size: 1.8rem; /* Ajusta el tamaño del encabezado */
+  }
+
+  .detalle-usuario-button {
+    width: 100%; /* Botones ocupan el 100% del ancho en tablets */
+  }
+}
+
+/* Responsive styles for mobile devices */
+/* Responsive styles for mobile devices */
+@media (max-width: 768px) {
+  .detalle-usuario-page {
+    padding: 10px; /* Reducir el padding */
+  }
+
+  .detalle-usuario-header {
+    font-size: 1.4rem; /* Ajusta el tamaño del encabezado */
+    margin-bottom: 10px; /* Ajustar el margen inferior */
+  }
+
+  .detalle-usuario-container {
+    padding: 10px; /* Reducir el padding */
+  }
+
+  .detalle-usuario-info {
+    grid-template-columns: 1fr; /* Una columna para móviles */
+    gap: 1rem; /* Ajustar el espacio entre elementos */
+  }
+
+  .detalle-usuario-label {
+    font-size: 0.8rem; /* Ajustar el tamaño de los labels */
+    margin-bottom: 5px; /* Ajustar el margen inferior */
+  }
+
+  .detalle-usuario-value {
+    font-size: 14px; /* Reducir el tamaño de las entradas */
+    padding: 5px; /* Ajustar el padding */
+  }
+
+  .detalle-usuario-button {
+    width: 100%; /* Botones ocupan todo el ancho en móviles */
+    font-size: 12px; /* Reducir el tamaño del texto en botones para móviles */
+    padding: 5px 10px; /* Ajustar el padding */
+  }
+
+  .detalle-usuario-submit {
+    font-size: 12px; /* Reducir el tamaño del texto */
+    padding: 5px 10px; /* Ajustar el padding */
+  }
+
+  .button-container {
+    flex-direction: column; /* Cambiar la dirección de los botones */
+    gap: 1px; /* Ajustar el espacio entre botones */
+  }
+
+  .margin-spacer {
+    display: none;
+  }
+  
+  .detalle-usuario-page .password-input-container {
+    padding: 5px; /* Ajustar el padding */
+  }
+
+  .detalle-usuario-page .password-section .password-buttons {
+    top: 40%; /* Ajustar la posición de los botones */
+    left: 88%;
+  }
+}

@@ -1,0 +1,10 @@
+.footer {
+    background-color: #99235C;
+    color: white;
+    padding: 10px;
+}
+
+.footer h4{
+    display: flex;
+    justify-content: center;
+}

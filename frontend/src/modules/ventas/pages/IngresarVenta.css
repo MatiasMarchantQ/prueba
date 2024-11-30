@@ -1,0 +1,150 @@
+/* Global Styles */
+
+.ingresar-venta-wrapper {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  margin: 0 auto;
+  height: auto;
+  max-width: auto;
+  font-family: Montserrat;
+}
+
+.ingresar-venta-header {
+  text-align: center;
+  margin-bottom: 3rem;
+  font-weight: bold;
+  font-size: 2rem;
+  color: #99235C;
+}
+
+/* Form Styles */
+
+.ingresar-venta-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ingresar-venta-fields-group {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4rem;
+}
+
+.ingresar-venta-field-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.ingresar-venta-field-group label {
+  margin-bottom: 5px;
+  color: #99235C;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+/* Common styles for input, select, textarea, and email */
+.ingresar-venta-field-control,
+.ingresar-venta-field-group input[type="email"],
+.ingresar-venta-field-group select,
+.ingresar-venta-field-group textarea {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 16px;
+  margin-bottom: 10px;
+  background-color: #fff;
+}
+
+
+.ingresar-venta-field-control[readonly] {
+  border: none;
+  background-color: transparent;
+  pointer-events: none;
+}
+
+/* Adjusting select width */
+.ingresar-venta-field-group select {
+  width: 100%;
+}
+
+/* Button Styles */
+
+.ingresar-venta-submit-button {
+  align-self: flex-start;
+  width: 31%;
+  margin-top: 20px;
+  padding: 10px 20px;
+  background-color: #99235C;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.ingresar-venta-submit-button:hover {
+  background-color: #b93775;
+}
+
+/* Error Message Styles */
+
+.ingresar-venta-error-message {
+  color: red;
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+.link-to-dashboard{
+  color: #99235C;
+  text-decoration: none;
+}
+
+.link-to-dashboard:hover{
+  color: #b93775;
+}
+
+
+.link-to-new-sale {
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  font-size: 16px;
+  cursor: pointer;
+  text-decoration: none;
+  color: #99235C;
+}
+
+.link-to-new-sale:hover {
+  color: #b93775;
+}
+
+/* Responsive Design */
+
+@media (max-width: 768px) {
+  .ingresar-venta-fields-group {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .ingresar-venta-header{
+    margin-right: auto;
+  }
+
+  .ingresar-venta-fields-group {
+    grid-template-columns: repeat(1, 1fr);
+  }
+  .ingresar-venta-field-group {
+    margin-bottom: 20px;
+    max-width: 80%;
+  }
+  .ingresar-venta-submit-button {
+    width: 80%;
+  }
+
+  .ingresar-venta-field-control#client_phone,
+  .ingresar-venta-field-control#client_secondary_phone{
+    width: 100%;
+  }
+}

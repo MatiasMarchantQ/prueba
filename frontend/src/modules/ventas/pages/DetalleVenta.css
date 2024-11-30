@@ -1,0 +1,264 @@
+/* Estilos generales */
+
+* {
+  box-sizing: border-box;
+  font-family: Montserrat;
+}
+
+.sale-detail-page {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  margin: 0 auto;
+  max-width: 1000px;
+  margin-top: -3rem;
+}
+
+.sale-detail-header {
+  text-align: center;
+  margin-bottom: 20px;
+  font-weight: bold;
+  font-size: 2.5rem;
+  color: #99235C;
+}
+
+.sale-detail-page h2 {
+  color: #99235C;
+  font-size: 2rem;
+  text-align: center;
+}
+
+.priority-toggle strong{
+  color: #99235C;
+}
+
+/* Estilos de formulario */
+.executive-info li{
+  margin-bottom: 0.5rem;
+}
+
+.sale-detail-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.sale-detail-fields-group {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4rem;
+}
+
+.sale-detail-images {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-top: -4rem;
+  margin-right: 9rem;
+}
+
+.sale-detail-field-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.sale-detail-field-group strong {
+  color: #99235C;
+}
+
+.sale-detail-field-group label {
+  color: #99235C;
+  font-weight: bold;
+  display: block;
+}
+
+.sale-detail-field-group input,
+.sale-detail-field-group select,
+.sale-detail-field-group textarea,
+.sale-detail-field-group input[type="email"] {
+  width: 105%;
+  padding: 8px;
+  margin: 4px 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 16px;
+  resize: vertical;
+}
+
+.sale-detail-field-group input[readonly],
+.sale-detail-field-group textarea[readonly],
+.sale-detail-field-group select[readonly] {
+  border: none;
+  background-color: transparent;
+  pointer-events: none;
+}
+
+.file-list-container {
+  width: 105%;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 30px;
+  margin-top: -3rem;
+}
+
+.attached-files {
+  display: flex;
+  flex-direction: column;
+}
+
+.file-item {
+  display: flex;
+  align-items:baseline;
+  font-size: 12px;
+}
+
+.file-item a {
+  color: #99235C;
+  text-decoration: none;
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-item a:hover {
+  text-decoration: underline;
+}
+
+.file-list-container .delete-button-files {
+  background-color: transparent;
+  color: red;
+  border: none;
+  padding: 0 1px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 10px;
+}
+
+.file-list-container .delete-button-files:hover {
+  background-color: #ff0000;
+  color: #fff;
+}
+
+/* Estilos de botones */
+
+.sale-detail-page button {
+  width: 15%;
+  margin-top: 3rem;
+  padding: 5px 15px;
+  background-color: #99235C;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.sale-detail-page .button-group {
+  display: flex;
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.sale-detail-submit-button:hover {
+  background-color: #b93775;
+}
+
+/* Estilos de mensaje de error */
+
+.sale-detail-error-message {
+  color: red;
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+/* Estilos adicionales */
+
+.executive-info {
+  width: 280%;
+  margin-bottom: 1rem;
+}
+
+.executive-info strong {
+  color: #99235C;
+}
+
+/* Estilos responsivos */
+
+@media (max-width: 768px) {
+  .sale-detail-page {
+    padding: 10px;
+  }
+  .sale-detail-fields-group {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .sale-detail-field-group {
+    margin-bottom: 20px;
+  }
+  .sale-detail-page button {
+    width: 30%;
+  }
+}
+
+@media (max-width: 480px) {
+  .sale-detail-page h2 {
+    font-size: 1.5rem;
+    text-align: center;
+  }
+
+  .sale-detail-page button {
+    width: 60%;
+  }
+
+  .sale-detail-page .back {
+    width: 40%;
+    margin-bottom: 10px;
+  }
+
+  .executive-info li{
+    width: 120%;
+    margin-left: -1.5rem;
+  }
+
+  .sale-detail-field-group {
+    word-break: break-all;
+  }
+
+  .sale-detail-fields-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sale-detail-field-group{
+    width: 110%;
+    margin-bottom: 1rem;
+    margin-left: -1rem;
+    font-size: 0.9rem;
+  }
+
+  .sale-detail-images {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-top: 3rem;
+    margin-right: 2.5rem;
+  }
+
+  .executive-info {
+    width: 100%;
+  }
+
+  .space {
+    display: none;
+  }
+
+  .comentarios-adicionales {
+    order: 0;
+  }
+
+  .sale-detail-page .update-message{
+    width: 60%;
+  }
+
+  .button-group{
+    width: 60%;
+  }
+}

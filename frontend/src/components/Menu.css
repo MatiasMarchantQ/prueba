@@ -1,0 +1,75 @@
+.menu-sidebar {
+  background-color: #99235C;
+  padding: 25px;
+  border-radius: 10px;
+  margin-left: 2rem;
+  font-family: Montserrat, sans-serif;
+  color: white;
+  height: 100%;
+  width: 16%;
+}
+
+.menu-sidebar h1 {
+  font-size: 2rem;
+  font-weight: bold;
+  text-align: center;
+  color: #fff;
+  margin-bottom: 20px;
+  margin-top: auto;
+}
+
+.menu-sidebar ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+}
+
+.menu-sidebar li {
+  margin-bottom: 20px;
+  text-align: center;
+  list-style-type: none;
+  position: relative;
+  margin-top: auto;
+}
+
+.menu-sidebar button {
+  background: none; /* Sin fondo para que se vea como el enlace */
+  border: none; /* Sin borde */
+  color: #fff;
+  text-decoration: none;
+  transition: color 0.2s ease;
+  font-size: 18px;
+  cursor: pointer; /* Cambia el cursor a una mano al pasar sobre el botón */
+  padding: 10px 20px; /* Añade padding similar al enlace activo */
+  border-radius: 5px; /* Añade border-radius para el estilo del enlace activo */
+  font-family: Montserrat, sans-serif; /* Aplica la fuente Montserrat a los botones */
+}
+
+.menu-sidebar button:hover {
+  color: #ccc;
+}
+
+.menu-sidebar button.active {
+  color: #fff;
+  background-color: #444;
+}
+
+.menu-sidebar hr {
+  margin-bottom: -10px;
+}
+
+.arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.arrow.down::before {
+  content: '\25BC';
+}
+
+.arrow.up::before {
+  content: '\25B2';
+}

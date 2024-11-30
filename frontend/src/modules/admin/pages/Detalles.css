@@ -1,0 +1,181 @@
+/* Detalles.css */
+
+.detalle-comuna-header {
+    color: #99235C;
+    margin-bottom: 30px;
+    font-size: 2.5em;
+    text-align: center;
+}
+
+.detalle-comuna-button {
+    background-color: #99235C;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    font-size: 1em;
+    margin: 5px;
+}
+
+.detalle-comuna-button:hover {
+    background-color: #7a1c4a;
+}
+
+.detalle-comuna-input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border: 2px solid #99235C;
+    border-radius: 4px;
+    font-size: 1em;
+}
+
+.detalle-comuna-checkbox {
+    margin-right: 10px;
+    transform: scale(1.2);
+}
+
+.detalle-comuna-promotion-list {
+    list-style-type: none;
+    padding: 0;
+}
+
+.detalle-comuna-promotion-item {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.detalle-comuna-promotion-item:hover {
+    background-color: #f0f0f0;
+    transform: translateX(5px);
+}
+
+.detalle-comuna-button-container {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 30px;
+}
+
+.detalle-comuna-section {
+    margin-bottom: 30px;
+}
+
+.detalle-comuna-label {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.detalle-comuna-section h2 {
+    color: #99235C;
+    font-size: 1.8em;
+    margin-bottom: 15px;
+}
+
+.detalle-comuna-section h3 {
+    color: #99235C;
+    font-size: 1.5em;
+    margin-bottom: 10px;
+}
+
+.detalle-comuna-section ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.detalle-comuna-section li {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 10px;
+    margin-bottom: 5px;
+    border-radius: 4px;
+}
+
+.detalle-comuna-button-container {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 30px;
+}
+
+.detalle-comuna-button-container button {
+    background-color: #99235C;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    font-size: 1em;
+    margin-left: 10px;
+}
+
+.detalle-comuna-button-container button:hover {
+    background-color: #7a1c4a;
+}
+
+.detalle-comuna-button-container button:first-child {
+    margin-left: 0;
+}
+
+/* Estilos específicos para el botón de editar */
+.detalle-comuna-button-container button:only-child {
+    background-color: #99235C;
+}
+
+.detalle-comuna-button-container button:only-child:hover {
+    background-color: #7a1c4a;
+}
+
+/* Estilos para los botones de guardar y cancelar */
+.detalle-comuna-button-container div {
+    display: flex;
+}
+
+.detalle-comuna-button-container div button:first-child {
+    background-color: #99235C;
+}
+
+.detalle-comuna-button-container div button:first-child:hover {
+    background-color: #7a1c4a;
+}
+
+.detalle-comuna-button-container div button:last-child {
+    background-color: #99235C;
+}
+
+.detalle-comuna-button-container div button:last-child:hover {
+    background-color: #7a1c4a;
+}
+
+@media (max-width: 600px) {
+    .detalle-comuna-container {
+        padding: 20px;
+    }
+
+    .detalle-comuna-header {
+        font-size: 2em;
+    }
+
+    .detalle-comuna-button {
+        width: 100%;
+        margin: 10px 0;
+    }
+
+    .detalle-comuna-button-container {
+        flex-direction: column;
+    }
+
+    .detalle-comuna-section h2 {
+        font-size: 1.5em;
+    }
+
+    .detalle-comuna-section h3 {
+        font-size: 1.3em;
+    }
+}

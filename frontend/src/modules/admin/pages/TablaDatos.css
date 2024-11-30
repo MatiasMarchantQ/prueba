@@ -1,0 +1,248 @@
+.tabla-datos {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 0px;
+}
+
+.tabla-datos h1 {
+  margin-top: 0;
+  text-align: center;
+  font-size: 24px;
+  font-weight: bold;
+  color: #99235C;
+}
+
+/* Sección de filtros */
+.tabla-datos-filter .filter-section {
+  margin-bottom: 20px;
+}
+
+.tabla-datos-filter .filter-button {
+  background-color: #99235C;
+  color: #ffffff;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s ease;
+}
+
+.tabla-datos-filter .filter-button:hover {
+  background-color: #8b2353;
+}
+
+.tabla-datos-filter .filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 15px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+}
+
+.tabla-datos-filter .filters select {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.tabla-datos-filter .filters button {
+  background-color: #99235C;
+  color: #ffffff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+.tabla-datos-filter .filters button:hover {
+  background-color: #8b2353;
+}
+
+.tabla-datos-filter .filters button:last-child {
+  background-color: #6c757d;
+}
+
+.tabla-datos-filter .filters button:last-child:hover {
+  background-color: #5a6268;
+}
+
+/* Contenedor de tabla */
+.tabla-datos .table-container {
+  overflow-x: auto;
+}
+
+.tabla-datos table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px;
+}
+
+.tabla-datos thead {
+  background-color: #99235C;
+}
+
+.tabla-datos th {
+  padding: 8px;
+  text-align: left;
+  font-weight: bold;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.tabla-datos td {
+  padding: 8px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+/* Resaltar filas pares */
+.tabla-datos tbody tr:nth-child(even) {
+  background-color: #fff7fb;
+}
+
+/* Estilos de paginación */
+.tabla-datos .pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.tabla-datos .pagination-button,
+.tabla-datos .pagination-number {
+  background-color: transparent;
+  border: none;
+  color: #99235C;
+  padding: 8px 12px;
+  margin: 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.tabla-datos .pagination-number.active {
+  background-color: #99235C;
+  color: white;
+}
+
+.tabla-datos .pagination-number:hover:not(.active),
+.tabla-datos .pagination-button:hover:not(:disabled) {
+  background-color: #f0f0f0;
+}
+
+/* Estilos responsivos */
+@media (max-width: 768px) {
+  .tabla-datos h1 {
+    font-size: 20px;
+  }
+
+  .status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: bold;
+  }
+  
+  .status-badge.active {
+    background-color: #d4edda;
+    color: #000000;
+  }
+  
+  .status-badge.inactive {
+    background-color: #f8d7da;
+    color: #000000;
+  }
+  
+  /* Para asegurar que las celdas de la tabla estén alineadas verticalmente */
+  .tabla-datos table td {
+    vertical-align: middle;
+  }
+
+  .tabla-datos th,
+  .tabla-datos td {
+    padding: 6px;
+    font-size: 14px;
+  }
+
+  .tabla-datos-filter .filters {
+    flex-direction: column;
+    padding: 10px;
+  }
+
+  .tabla-datos-filter .filters select,
+  .tabla-datos-filter .filters button {
+    width: 100%;
+  }
+
+  .tabla-datos-filter .filters button {
+    margin-bottom: 10px;
+  }
+
+  .tabla-datos .edit-button {
+    background-color: #99235C;
+    color: #ffffff;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  /* Opcional: estilo para cuando el mouse está sobre el botón */
+  .tabla-datos .edit-button:hover {
+      background-color: #8b2353; /* Un tono más oscuro del color original */
+  }
+
+  .tabla-datos .pagination-button,
+  .tabla-datos .pagination-number {
+    padding: 6px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 576px) {
+  .tabla-datos table {
+    min-width: 110%;
+    font-size: 12px;
+  }
+
+  .tabla-datos th,
+  .tabla-datos td {
+    padding: 5px;
+    font-size: 12px;
+  }
+
+  .tabla-datos .detalle-button {
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+
+  .tabla-datos .pagination-button,
+  .tabla-datos .pagination-number {
+    padding: 4px;
+    font-size: 12px;
+  }
+
+  /* Columnas en una sola fila en móviles */
+  .tabla-datos-filter .filters {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .tabla-datos-filter .filters select,
+  .tabla-datos-filter .filters button {
+    padding: 6px;
+  }
+
+  .tabla-datos td {
+    font-size: 12px;
+    padding: 4px;
+  }
+}

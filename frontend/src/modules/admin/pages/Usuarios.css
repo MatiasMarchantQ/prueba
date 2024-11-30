@@ -1,0 +1,235 @@
+.usuarios-page {
+  max-width: 100%;
+  padding: 0px;
+}
+
+/* Títulos */
+.usuarios-page h1 {
+  margin-top: 0;
+  text-align: center;
+  font-size: 24px;
+  font-weight: bold;
+  color: #99235C;
+}
+
+/* Sección de filtros */
+.usuarios-page .filter-section {
+  margin-bottom: 20px;
+}
+
+.usuarios-page .filter-button,
+.usuarios-page .search-button {
+  background-color: #99235C;
+  color: #ffffff;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s ease;
+}
+
+.usuarios-page .filter-button:hover,
+.usuarios-page .search-button:hover {
+  background-color: #8b2353;
+}
+
+/* Contenedor de filtros */
+.usuarios-page .filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 15px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+}
+
+.usuarios-page .filters select {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.usuarios-page .filters button {
+  background-color: #99235C;
+  color: #ffffff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+.usuarios-page .filters button:hover {
+  background-color: #8b2353;
+}
+
+.usuarios-page .filters button:last-child {
+  background-color: #6c757d;
+}
+
+.usuarios-page .filters button:last-child:hover {
+  background-color: #5a6268;
+}
+
+/* Tabla */
+.usuarios-page .table-container {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 0px;
+}
+
+/* Resaltar filas pares */
+.usuarios-page tbody tr:nth-child(even) {
+  background-color: #fff7fb;
+}
+
+.usuarios-page thead {
+  background-color: #99235C;
+  color: #fff;
+}
+
+
+.usuarios-page .detalle-button {
+  background-color: #99235C;
+  color: #ffffff;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.usuarios-page .detalle-button:hover {
+  background-color: #8b2353;
+}
+
+/* Paginación */
+.usuarios-page .pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.usuarios-page .pagination-button,
+.usuarios-page .pagination-number {
+  background-color: transparent;
+  border: none;
+  color: #99235C;
+  padding: 8px 12px;
+  margin: 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.usuarios-page .pagination-number.active {
+  background-color: #99235C;
+  color: white;
+}
+
+.usuarios-page .pagination-number:hover:not(.active),
+.usuarios-page .pagination-button:hover:not(:disabled) {
+  background-color: #f0f0f0;
+}
+
+/* Etiquetas de estado */
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.85em;
+  font-weight: bold;
+}
+
+.status-badge.active {
+  background-color: #d4edda;
+  color: #000000;
+}
+
+.status-badge.inactive {
+  background-color: #f8d7da;
+  color: #000000;
+}
+
+/* Asegurar alineación vertical en tablas */
+.usuarios-page table td {
+  vertical-align: middle;
+}
+
+/* Responsivo para pantallas medianas */
+@media (max-width: 768px) {
+  .usuarios-page h1 {
+    font-size: 20px;
+  }
+
+  .usuarios-page th,
+  .usuarios-page td {
+    padding: 6px;
+    font-size: 14px;
+  }
+
+  .usuarios-page .filters {
+    flex-direction: column;
+    padding: 10px;
+  }
+
+  .usuarios-page .filters select,
+  .usuarios-page .filters button {
+    width: 100%;
+  }
+
+  .usuarios-page .filters button {
+    margin-bottom: 10px;
+  }
+
+  .usuarios-page .pagination-button,
+  .usuarios-page .pagination-number {
+    padding: 6px;
+    font-size: 14px;
+  }
+}
+
+/* Responsivo para pantallas pequeñas */
+@media (max-width: 576px) {
+  .usuarios-page table{
+    max-width: 100%;
+  }
+
+  .usuarios-page table th,
+  .usuarios-page table td {
+    padding: 5px;
+    font-size: 12px;
+  }
+
+  .usuarios-page .detalle-button {
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+
+  .usuarios-page .pagination-button,
+  .usuarios-page .pagination-number {
+    padding: 4px;
+    font-size: 12px;
+  }
+
+  /* Ajustar filtros para pantallas pequeñas */
+  .usuarios-page .filters {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .usuarios-page .filters select,
+  .usuarios-page .filters button {
+    padding: 6px;
+  }
+
+  .usuarios-page td {
+    font-size: 12px;
+    padding: 4px;
+  }
+}

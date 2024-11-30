@@ -1,0 +1,320 @@
+/* Variables globales */
+:root {
+  --primary-color: #99235C;
+  --hover-color: #b93775;
+  --background-color: #f8f8f8;
+  --border-color: #ddd;
+  --text-color: #333;
+  --error-color: red;
+}
+
+/* Estilos generales */
+.mi-perfil-container {
+  display: flex;
+  flex-direction: column;
+  padding: 2rem;
+  max-width: 1200px;
+}
+
+.mi-perfil-container h1, .mi-perfil-container h2 {
+  color: var(--primary-color);
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.mi-perfil-container h1 {
+  font-size: 2.5rem;
+}
+
+.mi-perfil-container h2 {
+  font-size: 2rem;
+}
+
+/* Detalles del usuario */
+.user-details {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1rem;
+}
+
+.user-info strong {
+  color: var(--primary-color);
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+/* Inputs y selects */
+.mi-perfil-container input[type="text"],
+.mi-perfil-container input[type="email"],
+.mi-perfil-container input[type="password"],
+.mi-perfil-container select,
+.mi-perfil-container textarea {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  background-color: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.mi-perfil-container input[readonly],
+.mi-perfil-container textarea[readonly],
+.mi-perfil-container select[readonly] {
+  border: none;
+  background-color: transparent;
+  pointer-events: none;
+}
+
+/* Botones */
+.mi-perfil-container button,
+.update-button {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin-right: 10px;
+}
+
+.mi-perfil-container button:hover,
+.update-button:hover {
+  background-color: var(--hover-color);
+}
+
+/* Sección de cambio de contraseña */
+.mi-perfil-container .change-password {
+  max-width: 800px;
+  margin: 2rem auto 0;
+}
+
+.mi-perfil-container .password-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.mi-perfil-container .password-form {
+  flex: 2;
+  margin-right: 2rem;
+}
+
+.mi-perfil-container .password-section {
+  margin-top: 2rem;
+}
+
+.mi-perfil-container .input-container {
+  position: relative;
+  margin-bottom: 1.5rem;
+}
+
+.mi-perfil-container .input-container label{
+  color: #99235C;
+  font-weight: bold;
+}
+
+.mi-perfil-container .input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.mi-perfil-container .input-wrapper input {
+  padding-right: 2.5rem;
+}
+
+.mi-perfil-container .change-password .input-wrapper .toggle-password {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: var(--primary-color);
+}
+
+/* Requisitos de contraseña */
+.mi-perfil-container .password-requirements {
+  width: 100%;
+  border-radius: 5px;
+  align-self: flex-start;
+  position: sticky;
+  margin-bottom: 1.5rem;
+}
+
+.mi-perfil-container .password-container li{
+  list-style: none;
+}
+
+.mi-perfil-container .password-requirements h3 {
+  margin-bottom: 1rem;
+  font-size: 16px;
+  color: var(--primary-color);
+}
+
+.mi-perfil-container .password-requirements ul {
+  padding-left: 2rem;
+  list-style-type: disc;
+}
+
+.mi-perfil-container .password-requirements li {
+  margin-bottom: 0.5rem;
+  font-size: 14px;
+}
+
+/* Error */
+.mi-perfil-container .error {
+  color: var(--error-color);
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+.mi-perfil-container .error-message {
+  color: var(--error-color);
+  border-radius: 4px;
+  padding: 10px;
+  margin-top: 10px;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .mi-perfil-container {
+    padding: 1.5rem;
+  }
+
+  .mi-perfil-container .user-details {
+    grid-template-columns: 1fr;
+  }
+
+  .mi-perfil-container .input-container {
+    width: 100%;
+  }
+
+  .mi-perfil-container h1 {
+    font-size: 2rem;
+  }
+
+  .mi-perfil-container button {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .mi-perfil-container .input-wrapper input {
+    width: 130%;
+  }
+
+  .mi-perfil-container .input-wrapper .toggle-password {
+    left: 115%;
+  }
+}
+
+
+/* Responsive design */
+@media (max-width: 1200px) {
+  .mi-perfil-container {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 992px) {
+  .mi-perfil-container .user-details {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .mi-perfil-container {
+    padding: 1rem;
+  }
+
+  .mi-perfil-container .user-details {
+    grid-template-columns: 1fr;
+  }
+
+  .mi-perfil-container .input-container {
+    width: 100%;
+  }
+
+  .mi-perfil-container h1 {
+    font-size: 1.8rem;
+  }
+
+  .mi-perfil-container button {
+    width: 100%;
+    margin-left: 0;
+    margin-top: 1rem;
+  }
+
+  .mi-perfil-container .input-wrapper input {
+    width: 100%;
+  }
+
+  .mi-perfil-container .input-wrapper .toggle-password {
+    left: 90%;
+  }
+
+  .mi-perfil-container .password-container {
+    flex-direction: column;
+  }
+
+  .mi-perfil-container .password-form {
+    margin-right: 0;
+  }
+
+  .mi-perfil-container .password-requirements {
+    width: 100%;
+    margin-top: 2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .mi-perfil-container {
+    padding: 0.5rem;
+  }
+
+  .user-info {
+    margin-bottom: 0.5rem;
+  }
+
+  .input-container {
+    margin-bottom: 1rem;
+  }
+
+  .mi-perfil-container h1 {
+    font-size: 1.5rem;
+  }
+
+  .mi-perfil-container button {
+    font-size: 0.9rem;
+  }
+
+  .mi-perfil-container .input-wrapper input {
+    padding: 0.5rem;
+  }
+
+  .mi-perfil-container .input-wrapper .toggle-password {
+    left: 85%;
+  }
+
+  .mi-perfil-container .password-requirements {
+    padding: 1rem;
+    margin-top: -1rem;
+  }
+
+  .mi-perfil-container .password-requirements h3 {
+    font-size: 14px;
+  }
+
+  .mi-perfil-container .password-requirements li {
+    font-size: 12px;
+  }
+}

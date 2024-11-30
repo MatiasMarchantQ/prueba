@@ -1,0 +1,40 @@
+.login-header {
+    margin-top: 1rem;
+    background-color: #99235C;
+    color: #ffffff;
+    padding: 15px;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-left {
+    flex: 1;
+    text-align: left;
+}
+
+.header-left h1 {
+    font-size: 2rem;
+}
+
+.header-right {
+    margin-right: 10rem;
+    font-size: 2rem;
+    font-weight: bold;
+    text-align: right;
+    display: flex;
+    align-items: center;
+}
+
+.header-logo {
+    height: 4rem;
+    margin-right: 10px;
+}
+
+.header-ingbell {
+    font-size: 2rem;
+    font-weight: bold;
+}

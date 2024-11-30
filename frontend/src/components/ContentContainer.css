@@ -1,0 +1,19 @@
+  .content-area {
+    display: flex;
+    flex: 1;
+  }
+  
+  .page-container {
+    flex: 1;
+    border: 3px solid #99235C;
+    border-radius: 20px 0;
+    padding: 20px;
+    margin: 20px;
+  }
+
+  .content-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }

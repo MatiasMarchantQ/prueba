@@ -1,0 +1,833 @@
+/* Ventas.css */
+
+.ventas-page {
+    padding: 0px;
+    font-family: Montserrat, sans-serif;
+  }
+
+  .ventas-page h1, .ventas-page h2 {
+    text-align: center;
+    color: #99235C;
+  }
+  
+  /* Grid de 4 columnas */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+
+  /* Estilos generales para cada tarjeta */
+  .stats-grid .card {
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    cursor: default;
+    font-size: 0.9rem;
+  }
+
+  /* Estilo para los encabezados de las tarjetas */
+  .stats-grid .card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 5px;
+  }
+
+  .stats-grid .card h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #99235C;
+    margin-bottom: 5px;
+    margin-top: 20px;
+  }
+  
+  .card .mes-info {
+    margin-top: 0.9rem; /* Ajusta este valor según necesites */
+    display: inline-block; /* Esto asegura que el margen se aplique correctamente */
+  }
+
+  /* Estilo para el contenido de las tarjetas */
+  .stats-grid .card p {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+
+  /*
+  .ingresada { color: #ffa500; }
+  .nueva { color: #87ceeb; }
+  .en-revisión { color: #FFD100; }
+  .corrección-requerida { color: #a3d300; }
+  .pendiente { color: #4169E1; }
+  .activo { color: #008000; }
+  .anulado { color: #ff0000; }
+  */
+
+  .stats-grid .card .icon{
+    color: #99235C;
+  }
+  
+  .ventas-por-jornada {
+    padding: 15px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .ventas-por-jornada h3 {
+    margin-bottom: 10px;
+    color: #99235C;
+    font-size: 1rem;
+  }
+  
+  .jornadas-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+  }
+  
+  .jornada {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.85em;
+  }
+  
+  .jornada-nombre {
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #333;
+  }
+  
+  .horas-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  
+  .hora-item {
+    display: flex;
+    align-items: center;
+    background-color: #f0f0f0;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  
+  .hora {
+    color: #666;
+    margin-right: 5px;
+  }
+  
+  .ventas {
+    font-weight: bold;
+    color: #99235C;
+  }
+  
+  @media (max-width: 768px) {
+    .jornadas-container {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .region-grid {
+    height: 200px; /* altura fija */
+    overflow-y: hidden; /* no mostrar scrollbar vertical inicialmente */
+  }
+  
+  .region-grid.show-more {
+    overflow-y: auto; /* mostrar scrollbar vertical cuando se hace clic en "Ver más" */
+  }
+
+  .mes-grid {
+    height: 200px; /* altura fija */
+    overflow-y: hidden; /* no mostrar scrollbar vertical inicialmente */
+  }
+  
+  .mes-grid.show-more {
+    overflow-y: auto; /* mostrar scrollbar vertical cuando se hace clic en "Ver más" */
+  }
+
+  .estado-grid {
+    height: 200px; /* altura fija */
+    overflow-y: hidden; /* no mostrar scrollbar vertical inicialmente */
+  }
+  
+  .estado-grid.show-more {
+    overflow-y: auto; /* mostrar scrollbar vertical cuando se hace clic en "Ver más" */
+  }
+
+  .empresa-grid {
+    max-height: 200px; /* ajusta el valor según sea necesario */
+    overflow: hidden;
+  }
+  
+  .empresa-grid.show-more {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .meses-container {
+    height: 200px; /* altura fija */
+    overflow-y: hidden;
+  }
+  
+  .meses-container.show-more {
+    overflow-y: auto; /* activa el scroll */
+  }
+
+  .tiempo-container {
+    height: 200px; /* altura fija */
+    overflow-y: hidden;
+  }
+  
+  .tiempo-container.show-more {
+    overflow-y: auto; /* activa el scroll */
+  }
+
+  .dato {
+    margin-bottom: 20px;
+  }
+  
+  .promedio {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+  }
+
+  .promociones-container {
+    max-height: 200px;
+    overflow-y: hidden;
+  }
+  
+  .promociones-container.show-more {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  
+  .card.ventas-por-jornada {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .jornadas-container {
+    overflow-y: auto;
+    max-height: 105vh;
+  }
+  
+  .jornadas-container.show-more {
+    overflow-y: auto;
+    max-height: 250px; /* Ajusta el alto máximo cuando se muestra más */
+  }
+  
+  /* Nuevos estilos para alinear las horas y ventas en 3 columnas */
+  .horas-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+  }
+  
+  .hora-ventas {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+  
+  .hora {
+    flex: 0 0 auto; /* No se estira ni se encoge */
+    margin-right: 1px;
+  }
+  
+  .ventas-container {
+    flex: 1;
+    text-align: right;
+    overflow: hidden;
+  }
+  
+  .ventas {
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  
+  /* Ajuste para cuando el overflow-y está activo */
+  .jornadas-container.show-more .horas-container {
+    width: calc(100% + 1px); /* Compensa el ancho del scrollbar */
+  }
+
+  /* Evita que el contenido se desborde horizontalmente */
+  .mes-jornada {
+    overflow-x: hidden;
+  }
+
+  .ventas-page .search-bar {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+  }
+  
+  .ventas-page .search-bar .search-button,
+  .ventas-page .search-bar .filter-button {
+    color: #ffffff;
+    background: #99235C;
+    border: none;
+    border-radius: 3px;
+    padding: 5px 10px;
+    cursor: pointer;
+    margin-top: 5px;
+    margin-left: 5px;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+  }
+  
+  .ventas-page .search-bar .search-button:hover,
+  .ventas-page .search-bar .filter-button:hover {
+    background-color: #7c1c4a;
+  }
+  
+  .ventas-page .filter-section {
+    height: auto;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 30px;
+    margin-bottom: 20px;
+    display: none;
+    column-count: 3;
+  }
+  
+  .ventas-page .filter-section .column-1 {
+    margin-top: -20px;
+  }
+  
+  .ventas-page .filter-section .column-2 {
+    margin-top: 50%;
+  }
+  
+  .ventas-page .filter-section .column-3 {
+    margin-top: 50%;
+  }
+  
+  .ventas-page .filter-section.active {
+    display: block;
+  }
+  
+  .ventas-page .filter-section .filter-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .ventas-page .filter-section .filter-group select {
+    width: 100%;
+  }
+  
+  .ventas-page .filter-section h4 {
+    color: #99235C;
+    margin-top: 20px;
+    margin-bottom: 2px;
+  }
+  
+  .ventas-page .filter-section select,
+  .ventas-page .filter-section input[type="date"] {
+    width: 75%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  
+  .ventas-page .filter-section button {
+    background-color: #99235C;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 15px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-right: 10px;
+    margin-top: 12px;
+  }
+  .ventas-page .filter-section button:hover {
+    background-color: #7c1c4a;
+  }
+
+  .filters button{
+    background-color: #99235C;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 5px;
+    width: 20%;  
+  }
+
+  .ventas-page .search-bar .search-button {
+    color: #ffffff;
+    background: #99235C;
+    border: none;
+    border-radius: 3px;
+    padding: 5px 5px;
+    cursor: pointer;
+    margin-top: 5px;
+    margin-left: 5px;
+  }
+  
+  .ventas-page .search-bar .clear-button {
+    color: #ffffff;
+    background: #99235C;
+    border: none;
+    border-radius: 3px;
+    padding: 5px 5px;
+    cursor: pointer;
+    margin-top: 5px;
+    margin-left: 5px;
+}
+
+  .clear-button:hover {
+    background-color: #c82333;
+  }
+
+  .clear-button svg {
+    margin-right: 5px;
+  }
+
+  .export-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  
+  .export-buttons button {
+    padding: 10px 15px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+  }
+  
+  .export-buttons button:hover {
+    background-color: #45a049;
+  }
+  
+  
+  .ventas-page input[type="text"] {
+    padding: 12px;
+    width: 30%;
+    max-width: 400px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    color: #333;
+    background-color: #e6e6e6;
+    box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
+  }
+  
+  .ventas-page .sales-list {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .ventas-page .sale-card {
+    border: 1px solid #ddd;
+    border-radius: 20px 0;
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+  
+  .ventas-page .sale-card-header {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 20px;
+  }
+
+  .ventas-page .sale-priority{
+    margin-left: 1.5rem;
+  }
+  
+  .ventas-page .sale-status {
+    flex: 0 0 100px;
+    text-align: left;
+    font-weight: bold;
+    margin-top: calc(6%);
+    margin: 1rem;
+  }
+  
+  .ventas-page .sale-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-top: 1rem;
+  }
+  
+  .ventas-page .info-top, .info-bottom {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1px;
+  }
+  
+  .ventas-page .info-top {
+    font-size: 20px;
+    color: #99235C;
+    font-weight: bold;
+  }
+  
+  .info-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center; 
+  }
+  
+  .info-item {
+    text-align: center;
+    margin: 10px 0;
+  }
+  
+  .client-name {
+    font-weight: bold;
+  }
+
+.ventas-page .info-bottom {
+    font-size: 0.9rem;
+  }
+  
+  .ventas-page .info-item {
+    display: inline-flex;
+    align-items: center;
+    margin-top: auto;
+  }
+  
+  .ventas-page .info-item:not(:last-child)::after {
+    content: ' | ';
+    margin-left: 5px;
+    margin-right: 5px;
+
+  }
+  
+  .ventas-page .info-item.purple {
+    color: #99235C;
+  }
+  
+  .ventas-page .info-item.gray {
+    color: #525252;
+  }
+
+  .ventas-page .info-item + .info-item {
+    margin-left: 0;
+  }
+  
+  .ventas-page .info-item-link {
+    margin-left: 5px;
+  }
+  
+  .ventas-page .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 20px 0;
+  }
+  
+  .ventas-page .pagination-button {
+    background-color: transparent;
+    border: 1px solid #99235C;
+    color: #99235C;
+    padding: 8px 16px;
+    margin: 0 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  
+  .ventas-page .pagination-button:disabled {
+    color: #ccc;
+    border-color: #ccc;
+    cursor: not-allowed;
+  }
+  
+  .ventas-page .pagination-numbers {
+    display: flex;
+    align-items: center;
+  }
+  
+  .ventas-page .pagination-number {
+    background-color: transparent;
+    border: none;
+    color: #99235C;
+    padding: 8px 12px;
+    margin: 0 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  
+  .ventas-page .pagination-number.active {
+    background-color: #99235C;
+    color: white;
+  }
+  
+  .ventas-page .pagination-number:hover:not(.active) {
+    background-color: #f0f0f0;
+  }
+  
+  .ventas-page .pagination-button{
+    border: none
+  }
+
+  .ventas-page .ver-mas-btn{
+    background-color: #99235C;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 4px;
+    border: none;
+  }
+
+   .button-ver-mas {
+    background-color: transparent;
+    border: none;
+    padding: 10px;
+    font-size: 14px;
+    color: #337ab7;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  
+  .button-ver-mas:hover {
+    color: #23527c;
+    text-decoration: underline;
+  }
+
+  .history-modal {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  
+  .history-modal-content {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    max-height: 80vh;
+    width: 80%;
+    max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  
+  .history-modal-content h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    background-color: #fff;
+    border-bottom: 1px solid #99235C;
+    color: #99235C;
+  }
+  
+  .scrollable-content {
+    overflow-y: auto;
+    flex-grow: 1;
+    padding-right: 10px;
+  }
+  
+  .history-modal-content ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .history-modal-content li {
+    margin-bottom: 10px;
+  }
+  
+  .history-modal-content button {
+    background-color: #99235C;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    align-self: flex-end;
+    margin-top: 20px;
+  }
+  
+  .history-modal-content button:hover {
+    background-color: #7c1c4a;
+  }
+  
+  .modal-open {
+    overflow: hidden;
+  }
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .stats-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .ventas-page input[type="text"] {
+      width: 100%;
+    }
+    .ventas-page .sales-list {
+      flex-direction: column;
+    }
+    .ventas-page .sale-card {
+      flex-direction: column;
+    }
+    .ventas-page .sale-card-header {
+      flex-direction: column;
+    }
+    .ventas-page .sale-status {
+      margin-top: 0;
+    }
+    .ventas-page .sale-info {
+      flex-direction: column;
+    }
+    .ventas-page .info-top, .info-bottom {
+      flex-direction: column;
+    }
+    .ventas-page .info-bottom {
+      margin-bottom: 3rem;
+    }
+    .ventas-page .sale-history {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 90%;
+    }
+    .ventas-page .pagination {
+      flex-direction: column;
+    }
+    .ventas-page .pagination-button {
+      width: 100%;
+    }
+    
+    /* Nuevos estilos para hacer responsiva la sección de filtros */
+    .ventas-page .filter-section {
+      column-count: 1;
+      padding: 15px;
+    }
+    .ventas-page .filter-section .column-1,
+    .ventas-page .filter-section .column-2,
+    .ventas-page .filter-section .column-3 {
+      margin-top: 0;
+    }
+    .ventas-page .filter-section select,
+    .ventas-page .filter-section input[type="date"] {
+      width: 100%;
+    }
+    .ventas-page .filter-section button {
+      width: 100%;
+      margin-right: 0;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .stats-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .stats-grid .card {
+      padding: 10px;
+    }
+    
+    .stats-grid .card h3 {
+      font-size: 0.9rem;
+    }
+    
+    .stats-grid .card h4 {
+      font-size: 1rem;
+    }
+    
+    .stats-grid .card p {
+      font-size: 0.8rem;
+    }
+    
+    .ventas-page .info-item:not(:last-child)::after {
+      display: none;
+    }
+    
+    .ver-mas-btn {
+      padding: 6px 12px;
+      font-size: 0.8rem;
+    }
+
+
+    .ventas-page input[type="text"] {
+      padding: 10px;
+    }
+    .ventas-page .sales-list {
+      margin-bottom: 10px;
+    }
+    .ventas-page .sale-card {
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .ventas-page .sale-card-header {
+      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .ventas-page .sale-status {
+      font-size: 16px;
+    }
+    .ventas-page .sale-info {
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .ventas-page .info-top, .info-bottom {
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .ventas-page .info-bottom {
+      margin-bottom: 6.5rem;
+    }
+    .ventas-page .sale-history {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 90%;
+    }
+    .ventas-page .pagination {
+      margin: 10px 0;
+    }
+    .ventas-page .pagination-button {
+      padding: 5px;
+    }
+  }
+  
+  /* Nuevo media query para tablets */
+  @media (min-width: 481px) and (max-width: 1024px) {
+    .ventas-page .filter-section {
+      column-count: 2;
+      padding: 20px;
+    }
+    .ventas-page .filter-section .column-2,
+    .ventas-page .filter-section .column-3 {
+      margin-top: 0;
+    }
+    .ventas-page .filter-section select,
+    .ventas-page .filter-section input[type="date"] {
+      width: 90%;
+    }
+  }

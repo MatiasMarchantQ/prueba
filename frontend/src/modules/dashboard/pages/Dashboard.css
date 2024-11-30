@@ -1,0 +1,58 @@
+@media (max-width: 768px) {
+    .menu-sidebar {
+        width: 100%; /* Ancho completo en pantallas pequeñas */
+        margin: 0; /* Sin margen */
+        border-radius: 0; /* Sin borde redondeado */
+    }
+
+    .page-container {
+        margin: 10px; /* Margen reducido */
+    }
+
+    .content-area {
+        flex-direction: column; /* Cambio de dirección para dispositivos pequeños */
+    }
+
+    .header-content {
+        flex-direction: column; /* Colocar el contenido en columna */
+        align-items: center; /* Centrar elementos */
+    }
+
+    .header-right {
+        margin-right: 0; /* Sin margen derecho */
+        margin-top: 10px; /* Añadir margen superior para separación */
+    }
+
+    .ventas-page input[type="text"] {
+        width: 80%; /* Aumentar el ancho del input en móviles */
+        max-width: 100%; /* Asegurar que no exceda el ancho del contenedor */
+    }
+
+    .ventas-page .pagination {
+        flex-direction: column; /* Cambiar a columna para paginación */
+        align-items: center; /* Centrar elementos */
+    }
+
+    .ventas-page .pagination-button, .ventas-page .pagination-number {
+        width: 100%; /* Botones ocupan ancho completo */
+        margin: 5px 0; /* Espaciado vertical entre botones */
+    }
+}
+
+@media (max-width: 480px) {
+    .menu-sidebar h1 {
+        font-size: 1.5rem; /* Tamaño de fuente reducido */
+    }
+
+    .menu-sidebar button {
+        font-size: 16px; /* Tamaño de fuente reducido para botones */
+    }
+
+    .header-left h1 {
+        font-size: 1.5rem; /* Tamaño de fuente reducido */
+    }
+
+    .footer h4 {
+        font-size: 1rem; /* Tamaño de fuente reducido */
+    }
+}
