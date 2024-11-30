@@ -5,32 +5,51 @@ import InstallationAmount from '../models/InstallationAmounts.js';
 import Region from '../models/Regions.js';
 import Commune from '../models/Communes.js';
 import { Op } from 'sequelize';
-
+import sequelize from '../config/db.js';
 
 export const getPromotions = async (req, res) => {
-    try {
-        const promotions = await Promotion.findAll({
-            attributes: ['promotion_id', 'promotion', 'installation_amount_id'],
-            include: [
-              {
-                model: InstallationAmount,
-                as: 'InstallationAmounts',
-                attributes: ['amount'],
-              },
-              {
-                model: PromotionCommune,
-                as: 'PromotionCommunes',
-                attributes: ['commune_id'],
-              },
-            ],
-          });
-  
-      res.status(200).json(promotions);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Error al obtener promociones' });
-    }
-  };
+  try {
+      const promotions = await Promotion.findAll({
+          attributes: ['promotion_id', 'promotion', 'installation_amount_id'],
+          include: [
+            {
+              model: PromotionCommune,
+              as: 'PromotionCommunes',
+              attributes: ['commune_id'],
+            }
+          ]
+        });
+
+    // Obtener los IDs de instalación de todas las promociones
+    const installationAmountIds = promotions.map(p => p.installation_amount_id);
+
+    // Buscar los amounts correspondientes
+    const installationAmounts = await InstallationAmount.findAll({
+      where: {
+        installation_amount_id: {
+          [Op.in]: installationAmountIds
+        }
+      }
+    });
+
+    // Crear un mapa de amounts por installation_amount_id
+    const amountMap = installationAmounts.reduce((map, amount) => {
+      map[amount.installation_amount_id] = amount.amount;
+      return map;
+    }, {});
+
+    // Añadir el amount a cada promoción
+    const processedPromotions = promotions.map(promotion => ({
+      ...promotion.get({ plain: true }),
+      amount: amountMap[promotion.installation_amount_id] || null
+    }));
+
+    res.status(200).json(processedPromotions);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error al obtener promociones' });
+  }
+};
 
   export const getPromotionsByUser = async (req, res) => {
     try {

@@ -997,7 +997,7 @@ const handleError = (res, message, error) => {
 };
 
 export const getSalesBySearch = async (req, res) => {
-  const searchTerm = req.query.search;
+  const searchTerm = req.query.search?.trim();
   const userId = req.user.user_id;
   const userRoleId = req.user.role_id;
 
@@ -1006,7 +1006,44 @@ export const getSalesBySearch = async (req, res) => {
   }
 
   try {
-    const whereClause = buildWhereClause(searchTerm, userId, userRoleId);
+    const createSearchConditions = (term) => {
+      const cleanTerm = term.toLowerCase().trim();
+      const termLength = cleanTerm.length;
+
+      const conditions = {
+        [Op.and]: [],
+        [Op.or]: []
+      };
+
+      // Condiciones de búsqueda
+      if (termLength > 6) {
+        conditions[Op.or].push(
+          { client_rut: { [Op.eq]: cleanTerm } } // Coincidencia exacta con RUT
+        );
+      }
+
+      if (termLength <= 5) {
+        conditions[Op.or].push(
+          { service_id: { [Op.like]: `%${cleanTerm}%` } } // Coincidencia parcial con service_id
+        );
+      }
+
+      const names = cleanTerm.split(' ');
+      if (names.length > 0) {
+        const firstNameConditions = names.map(name => ({ client_first_name: { [Op.like]: `%${name}%` } }));
+        const lastNameConditions = names.map(name => ({ client_last_name: { [Op.like]: `%${name}%` } }));
+
+        conditions[Op.or].push(...firstNameConditions, ...lastNameConditions);
+      }
+
+      conditions[Op.or].push(
+        { client_email: { [Op.like]: `%${cleanTerm}%` } }
+      );
+
+      return conditions;
+    };
+
+    const whereClause = buildWhereClause(createSearchConditions(searchTerm), userId, userRoleId);
 
     const sales = await Sales.findAll({
       where: whereClause,
@@ -1069,52 +1106,70 @@ export const getSalesBySearch = async (req, res) => {
           attributes: ['company_name'],
         },
       ],
-      order: [['created_at','DESC']],
+      order: [
+        // Priorizar coincidencias exactas con service_id
+        [Sequelize.literal(`CASE WHEN service_id LIKE '%${searchTerm}%' THEN 0 ELSE 1 END`), 'ASC'],
+        // Ordenar por coincidencia exacta con client_rut si el término tiene más de 6 caracteres
+        ...(searchTerm.length > 6 ? [
+          [Sequelize.literal(`CASE WHEN client_rut = '${searchTerm}' THEN 0 ELSE 1 END`), 'ASC'],
+        ] : []),
+        // Luego, ordenar por coincidencias parciales en client_first_name y client_last_name
+        [Sequelize.literal(`CASE WHEN client_first_name LIKE '%${searchTerm}%' THEN 0 ELSE 1 END`), 'ASC'],
+        [Sequelize.literal(`CASE WHEN client_last_name LIKE '%${searchTerm}%' THEN 0 ELSE 1 END`), 'ASC'],
+        // Ordenar por service_id si el término tiene 5 caracteres o menos
+        ...(searchTerm.length <= 5 ? [
+          ['service_id', 'ASC'],
+        ] : []),
+        // Finalmente, ordenar por created_at en orden descendente
+        ['created_at', 'DESC'],
+      ],
     });
 
     if (sales.length === 0) {
-      return res.status(404).json({ message: 'No se encontró ninguna venta que coincida con la búsqueda' });
+      return res.status(404).json({ 
+        message: 'No se encontró ninguna venta que coincida con la búsqueda',
+        searchTerm: searchTerm 
+      });
     }
 
-    res.json(sales);
+    res.json({
+      message: `Se encontraron ${sales.length} venta(s)`,
+      data: sales
+    });
   } catch (error) {
     console.error('Error al obtener ventas por búsqueda:', error);
-    return res.status(500).json({ message: 'Error al obtener ventas por búsqueda', error: error.message });
+    return res.status(500).json({ 
+      message: 'Error al obtener ventas por búsqueda', 
+      error: error.message 
+    });
   }
 };
 
-const buildWhereClause = (searchTerm, userId, userRoleId) => {
-  const conditions = {
-    [Op.and]: [],
-    [Op.or]: [
-      { client_first_name: { [Op.like]: `%${searchTerm.toLowerCase()}%` } },
-      { client_last_name: { [Op.like]: `%${searchTerm.toLowerCase()}%` } },
-      { client_rut: { [Op.like]: `%${searchTerm.toLowerCase()}%` } },
-      { client_email: { [Op.like]: `%${searchTerm.toLowerCase()}%` } },
-      { client_phone: { [Op.like]: `%${searchTerm.toLowerCase()}%` } },
-      { street: { [Op.like]: `%${searchTerm.toLowerCase()}%` } },
-      { service_id: { [Op.like]: `%${searchTerm.toLowerCase()}%` } },
-    ],
-  };
+// Modificar la función buildWhereClause para manejar condiciones de búsqueda
+const buildWhereClause = (searchConditions, userId, userRoleId) => {
+  const conditions = typeof searchConditions === 'object' 
+    ? { ...searchConditions } 
+    : {
+        [Op.and]: [],
+        [Op.or]: [
+          { service_id: { [Op.like]: `%${searchConditions.toLowerCase()}%` } },
+        ]
+      };
 
   // Condiciones según el role_id
   if (userRoleId === 1 || userRoleId === 4) {
-    // roles 1(SuperAdmin) y 4(Valid) pueden buscar libremente
-    return conditions;
+    return conditions; // roles 1(SuperAdmin) y 4(Valid) pueden buscar libremente
   } else if (userRoleId === 2) {
-    // rol 2(Admin): buscar por company_id asociado
-    conditions[Op.and].push({ company_id: userId });
+    conditions[Op.and].push({ company_id: userId }); // rol 2(Admin): buscar por company_id asociado
   } else if (userRoleId === 3) {
-    // rol 3(Ejec): buscar solo por executive_id y sale_status_id 1 o 4
     conditions[Op.and].push({ executive_id: userId });
     conditions[Op.and].push({ 
       [Op.or]: [{ sale_status_id: 1 }, { sale_status_id: 4 }] 
-    });
+    }); // rol 3(Ejec): buscar solo por executive_id y sale_status_id 1 o 4
   } else if (userRoleId === 4) {
-    // rol 4(Despachador): buscar solo por sale_status_id 2, 5 o 6
     conditions[Op.and].push({ 
       [Op.or]: [{ sale_status_id: 2 }, { sale_status_id: 5 }, { sale_status_id: 6 }] 
-    });
+    }); // rol 4(Despachador): buscar solo por sale_status_id 2, 5 o 6
   }
 
   return conditions;

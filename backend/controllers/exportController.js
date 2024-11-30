@@ -56,7 +56,7 @@ export const exportSales = async (sales, format, filters ,res) => {
         { header: 'Estado de venta', key: 'saleStatus', width: 15 },
         { header: 'Motivo de estado de venta', key: 'reason', width: 20 },
         { header: 'Empresa', key: 'company', width: 20 },
-        { header: 'Fecha de creación', key: 'created_at', width: 15 },
+        { header: 'Fecha de creación', key: 'created_at', width: 30 },
         { header: 'Ejecutivo', key: 'executive', width: 30 }
       ];
 
